@@ -1,10 +1,4 @@
 import argparse
-import glob
-import os
-import shutil
-import subprocess
-
-import numpy as np
 
 # dens =  g / V
 
@@ -21,7 +15,7 @@ def calc_dens_box(arguments):
         "-num_w", help="The number of water molecules"
     )
     parser.add_argument(
-        "-cell ",
+        "-c",
         help="The length of a cubic cell",
         type=int,
         nargs="+",
@@ -29,6 +23,7 @@ def calc_dens_box(arguments):
 
     args = parser.parse_args(arguments)
     print(args)
+    print(arguments)
 
     # mmass_w = 18.01528  # g / mol water
     # n_w = 64

@@ -6,8 +6,20 @@ from dztools.calc_dens import (
 )
 from dztools.center_xyz import (
     center_periodic,
-
 )
+from dztools.log import (
+    dzlog,
+    dzlog_print,
+)
+from dztools.orderp import (
+    count_w,
+    co2_op,
+    calc_dist,
+)
+from dztools.plotter import(
+    plot_data,
+)
+
 
 # NOTE: when defining new functionality
 # put the import statements in the function defenition
@@ -17,7 +29,12 @@ from dztools.center_xyz import (
 MAPPER = {
         "dens": calc_dens_box,
         "pbc": center_periodic,
-        }
+        "log": dzlog_print,
+        "cw": count_w,
+        "co2_op": co2_op,
+        "calc_dist": calc_dist,
+        "plot": plot_data,
+}
 
 def dztool():
     """Map an dztool command to a python function.
@@ -43,6 +60,8 @@ def dztool():
             print(f"\t{key}")
         return
 
+    command = 'dz ' + ' '.join(sys.argv[1:]) + '\n'
+    dzlog(command)
     tool_name = sys.argv[1]
     arguments = sys.argv[2:]
 
