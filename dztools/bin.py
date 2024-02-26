@@ -20,6 +20,10 @@ from dztools.plotter import(
     plot_data,
 )
 
+from dztools.ruru import(
+    calc_op_ruru,
+    calc_ruru_dist,
+)
 
 # NOTE: when defining new functionality
 # put the import statements in the function defenition
@@ -34,6 +38,8 @@ MAPPER = {
         "co2_op": co2_op,
         "calc_dist": calc_dist,
         "plot": plot_data,
+        "ruru_op": calc_op_ruru,
+        "ruru_dist": calc_ruru_dist,
 }
 
 def dztool():
