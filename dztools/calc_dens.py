@@ -12,29 +12,30 @@ def calc_dens_box(arguments):
     )
 
     parser.add_argument(
-        "-num_w", help="The number of water molecules"
+        "-num_w", type=int, help="The number of water molecules"
     )
     parser.add_argument(
         "-c",
         help="The length of a cubic cell",
-        type=int,
-        nargs="+",
+        type=float,
+        # nargs="+",
     )
 
     args = parser.parse_args(arguments)
-    print(args)
-    print(arguments)
+    # print(args)
+    # print(arguments)
 
-    # mmass_w = 18.01528  # g / mol water
-    # n_w = 64
+    mmass_w = 18.01528  # g / mol water
+    n_w = args.num_w
 
-    # mass_w = (n_w/avo)*mmass_w
+    mass_w = (n_w/AVO)*mmass_w
     # # cell = 13.694596613173969  # angstrom
-    # cell = 12.4138
-    # ang_to_cm = 10**(-8)
-    # vol = (cell*ang_to_cm)**3 #cm3
-    # dens = mass_w/vol
+    cell = args.c # 12.4138
+    ang_to_cm = 10**(-8)
+    print(cell, ang_to_cm)
+    vol = (cell*ang_to_cm)**3 #cm3
+    dens = mass_w/vol
     # print('whada')
-    # print('mass:', mass_w, 'g')
-    # print('vol :', vol, 'cm3')
-    # print('dens:', dens, 'g/cm3')
+    print('mass:', mass_w, 'g')
+    print('vol :', vol, 'cm3')
+    print('dens:', dens, 'g/cm3')

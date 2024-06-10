@@ -23,6 +23,9 @@ from dztools.plotter import(
 from dztools.ruru import(
     calc_op_ruru,
     calc_ruru_dist,
+    ruru_cat,
+    calc_ruru_x,
+    find_rel_idxes,
 )
 
 # NOTE: when defining new functionality
@@ -40,6 +43,9 @@ MAPPER = {
         "plot": plot_data,
         "ruru_op": calc_op_ruru,
         "ruru_dist": calc_ruru_dist,
+        "ruru_cat": ruru_cat,
+        "ruru_x": calc_ruru_x,
+        "ruru_idx": find_rel_idxes,
 }
 
 def dztool():

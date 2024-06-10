@@ -152,10 +152,10 @@ def co2_op(arguments):
         # print(idx, angle, trimer, monomers, len(o_neighs), o_neighs[0], o_neighs[1])
 
         # idx, min_angle, trimers, monomers, len(o_neighs)
-        
+
         # Check that nothing serious have gone wrong:
         assert len(o_neighs) in (2, 3)
-        
+
         composite_op =  np.pi  - angle + (len(o_neighs) - 2)/4
         fake_op = np.pi - angle + (len(o_neighs) - 2)/4
 
@@ -164,14 +164,14 @@ def co2_op(arguments):
         #     return [fake_op, composite_op, angle, trimer, monomers, len(o_neighs)]
         if trimer > 0:
             if composite_op < args.a:
-                fake_op = args.a+ 0.05
+                fake_op = args.a + 0.05
             elif composite_op > args.b:
                 fake_op = args.b - 0.05
 
-        print(idx, fake_op, composite_op, angle, trimer, monomers, len(o_neighs))
+        print(idx, fake_op, composite_op, angle, trimer, monomers, len(o_neighs), angle)
         # return [fake_op, composite_op, angle, trimer, monomers, len(o_neighs)]
-            
-            
+
+
 
 
         # print(idx, angle, trimer, monomers, len(o_neighs))
