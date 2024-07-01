@@ -1,8 +1,8 @@
 """The functions to be used to run infretis via the terminal."""
-import sys
 import pathlib
+import sys
 
-from dztools.misc import get_mapper, dzlog
+from dztools.misc import dzlog, get_mapper
 
 MOD_PATH = str(pathlib.Path(__file__).parent.resolve())
 FOLDERS = ["funcs"]
