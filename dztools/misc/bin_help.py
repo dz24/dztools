@@ -7,6 +7,7 @@ MAXLINES = 100
 
 
 def get_mapper(folders, mod_path):
+    """"""
     mapper = {}
     for folder in folders:
         fpath = mod_path + f"/{folder}"
@@ -22,6 +23,7 @@ def get_mapper(folders, mod_path):
 
 
 def dzlog(command, mod_path):
+    """"""
     commands = [command]
     log_path = mod_path + "/.log"
     if isfile(log_path):
@@ -36,6 +38,7 @@ def dzlog(command, mod_path):
 
 
 def log(mod_path):
+    """"""
     log_path = mod_path + "/.log"
     with open(log_path, 'r') as read:
         for line in read:

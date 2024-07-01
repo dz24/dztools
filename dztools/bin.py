@@ -2,7 +2,7 @@
 import pathlib
 import sys
 
-from dztools.misc import dzlog, log, get_mapper
+from dztools.misc.bin_help import dzlog, log, get_mapper
 
 MOD_PATH = str(pathlib.Path(__file__).parent.resolve())
 FOLDERS = ["funcs", "md"]
