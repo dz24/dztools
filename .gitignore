@@ -1,1 +1,2 @@
-dztools/log/
+.*
+__pycache__
