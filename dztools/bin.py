@@ -2,11 +2,12 @@
 import pathlib
 import sys
 
-from dztools.misc import dzlog, get_mapper
+from dztools.misc import dzlog, log, get_mapper
 
 MOD_PATH = str(pathlib.Path(__file__).parent.resolve())
-FOLDERS = ["funcs"]
+FOLDERS = ["funcs", "md"]
 MAPPER = get_mapper(FOLDERS, MOD_PATH)
+MAPPER["log"] = log
 sys.dont_write_bytecode = True
 
 # NOTE: when defining new functionality
@@ -42,6 +43,10 @@ def dztool():
     dzlog(command, MOD_PATH)
     tool_name = sys.argv[1]
     arguments = sys.argv[2:]
+
+    if tool_name == 'log':
+        log(MOD_PATH)
+        return
 
     if tool_name not in list(MAPPER.keys()):
         msg = f"No tool named '{tool_name}', maybe you spelled it wrong?\n \

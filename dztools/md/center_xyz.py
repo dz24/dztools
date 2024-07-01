@@ -1,5 +1,6 @@
 import numpy as np
 import argparse
+from dztools.subparsers import add_io
 
 
 def calc_center(idx, xyzs, cell):
@@ -25,7 +26,6 @@ def calc_center2(center, xyzs, cell):
     # center = xyzs[idx-1][1:]
     for xyz in xyzs:
         xyz_p = [xyz[0]]
-        print('whistle', center)
         for dim, center_i in zip(xyz[1:], center):
             dim_c = dim - center_i
             if dim_c < -0.5 * cell:
@@ -45,10 +45,6 @@ def center_periodic(arguments):
     )
 
     parser.add_argument(
-        "-i", help="Input file"
-    )
-
-    parser.add_argument(
         "-c",
         help="The length of a cubic cell",
         type=float,
@@ -58,19 +54,10 @@ def center_periodic(arguments):
         "-idx",
         help="The particle idxes at center",
         type=int,
-        # nargs="+",
     )
-
-    parser.add_argument(
-        "-o",
-        help="Output file",
-        nargs='?',
-        const='periodic.xyz',
-    )
-
+    add_io(parser)
 
     args = parser.parse_args(arguments)
-    print(args)
 
     atoms = None
     cnt = 0
@@ -95,39 +82,7 @@ def center_periodic(arguments):
                     center = xyzs[args.idx-1][1:]
                 xyzs_c = calc_center2(center, xyzs, args.c)
 
-                print(header)
                 # write frame
                 for line_w in header + xyzs_c:
                     write.write(line_w)
                 cnt += 1
-
-
-
-            # for idx, line in enumerate(read):
-            #     # read frame
-            #     rip = line.rstrip().split()
-            #     mod = idx%(atoms+2)
-            #     if mod in (0, 1):
-            #         header.append(line)
-            #     else:
-            #         xyzs.append(rip)
-
-#                 else:
-#                     if mod == args.idx - 2:
-#                         center = [float(i) for i in rip[1:]]
-#                     xyz_p = [rip[0]]
-#                     for dim, center_i in zip([float(i) for i in rip[1:]], center):
-#                         dim_c = dim - center_i
-#                         if mod == 2:
-#                             print(idx, center, dim_c)
-#                         if mod == 2:
-#                             print(dim, dim_c)
-#                         if dim_c < -0.5*boxl:
-#                             mult = 1
-#                         elif dim_c > 0.5*boxl:
-#                             mult = -1
-#                         else:
-#                             mult = 0
-#                         xyz_p.append(f"{dim_c+boxl*mult:10.8f}")
-
-#                    write.write('\t'.join(xyz_p) + '\n')

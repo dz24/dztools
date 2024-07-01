@@ -1,7 +1,7 @@
 import glob
 import importlib
 from inspect import getmembers, isfunction
-from os.path import basename as bs
+from os.path import basename, isfile
 
 MAXLINES = 100
 
@@ -10,7 +10,7 @@ def get_mapper(folders, mod_path):
     mapper = {}
     for folder in folders:
         fpath = mod_path + f"/{folder}"
-        files = [bs(i)[:-3] for i in glob.glob(fpath + "/*py")]
+        files = [basename(i)[:-3] for i in glob.glob(fpath + "/*py")]
         for file in files:
             mod = importlib.import_module(
                 f".{folder}.{file}", package="dztools"
@@ -24,9 +24,10 @@ def get_mapper(folders, mod_path):
 def dzlog(command, mod_path):
     commands = [command]
     log_path = mod_path + "/.log"
-    with open(log_path, "a+") as read:
-        for line in read:
-            commands.append(line)
+    if isfile(log_path):
+        with open(log_path, "r") as read:
+            for line in read:
+                commands.append(line)
     commands = list(set(commands))[-MAXLINES:]
 
     with open(log_path, "w") as write:
@@ -34,15 +35,8 @@ def dzlog(command, mod_path):
             write.write(line)
 
 
-#         "dens": calc_dens_box,
-#         "pbc": center_periodic,
-#         "log": dzlog_print,
-#         "cw": count_w,
-#         "co2_op": co2_op,
-#         "calc_dist": calc_dist,
-#         "plot": plot_data,
-#         "ruru_op": calc_op_ruru,
-#         "ruru_dist": calc_ruru_dist,
-#         "ruru_cat": ruru_cat,
-#         "ruru_x": calc_ruru_x,
-#         "ruru_idx": find_rel_idxes,
+def log(mod_path):
+    log_path = mod_path + "/.log"
+    with open(log_path, 'r') as read:
+        for line in read:
+            print(line.rstrip())

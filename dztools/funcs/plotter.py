@@ -67,14 +67,8 @@ def plot(arguments):
         data = np.loadtxt(i)
         if args.avg:
             print(i, np.average(data[:, 1]))
-        # plt.plot(data[:, 0], data[:, 1])
-        # plt.plot(data[:, 0], data[:, 2])
         for dim in args.dim:
-            # plt.scatter(data[:, 0], data[:, dim])
             plt.plot(data[:, 0], data[:, dim])
-        # plt.plot(data[:, 0], data[:, 3])
-    # plt.plot(data[:, 0], data[:, 2])
-    # plt.plot(data[:, 0], data[:, 3])
     if args.log:
         plt.yscale("log")
     if args.hl is not None:
