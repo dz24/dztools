@@ -11,6 +11,8 @@ from dztools.misc.bin_help import dzlog, get_mapper, log
 MOD_PATH = str(pathlib.Path(__file__).parent.resolve())
 FOLDERS = ["funcs", "md"]
 MAPPER = get_mapper(FOLDERS, MOD_PATH)
+
+# # manually add function from other folder
 MAPPER["log"] = log
 
 # log the command
@@ -27,9 +29,6 @@ app = typer.Typer(
 # decorating imported mapper functions
 for func in MAPPER.values():
     app.command()(func)
-
-# manually add function from other folder
-app.command()(log)
 
 # NOTE: when defining new functionality
 # put the import statements in the function defenition
