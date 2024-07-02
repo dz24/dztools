@@ -1,8 +1,6 @@
-# from dztools.misc.subparsers import add_io
 from dztools.misc.xyz_help import calc_center2
 import typer
 from typing_extensions import Annotated
-
 
 def center_periodic(
     i: Annotated[str, typer.Option("-i", help="input")],
@@ -10,25 +8,6 @@ def center_periodic(
     c: Annotated[float, typer.Option("-c", help="The length of a cubic cell")],
     idx: Annotated[int, typer.Option("-idx", help="The particle idxes at center")],
 ):
-    # parser = argparse.ArgumentParser(
-    #     description="Make xyz file periodic for Jmol viewing."
-    # )
-
-    # parser.add_argument(
-    #     "-c",
-    #     help="The length of a cubic cell",
-    #     type=float,
-    # )
-
-    # parser.add_argument(
-    #     "-idx",
-    #     help="The particle idxes at center",
-    #     type=int,
-    # )
-    # add_io(parser)
-
-    # args = parser.parse_args(arguments)
-
     atoms = None
     cnt = 0
     center = [0, 0, 0]
