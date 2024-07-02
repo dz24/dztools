@@ -2,9 +2,10 @@
 
 import pathlib
 import sys
+
 import typer
 
-from dztools.misc.bin_help import dzlog, log, get_mapper
+from dztools.misc.bin_help import dzlog, get_mapper, log
 
 # define constants
 MOD_PATH = str(pathlib.Path(__file__).parent.resolve())

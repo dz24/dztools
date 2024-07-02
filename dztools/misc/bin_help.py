@@ -1,9 +1,8 @@
 import glob
 import importlib
 import pathlib
-from inspect import getmembers, isfunction, getmodule
+from inspect import getmembers, getmodule, isfunction
 from os.path import basename, isfile
-
 
 MAXLINES = 100
 
@@ -50,7 +49,7 @@ def dzlog(command, mod_path):
     commands = [command]
     log_path = mod_path + "/misc/.log"
     if isfile(log_path):
-        with open(log_path, "r") as read:
+        with open(log_path) as read:
             for line in read:
                 commands.append(line)
     commands = list(set(commands))[-MAXLINES:]
@@ -64,6 +63,6 @@ def log():
     """"""
     mod_path = str(pathlib.Path(__file__).parent.resolve())
     log_path = mod_path + "/.log"
-    with open(log_path, "r") as read:
+    with open(log_path) as read:
         for line in read:
             print(line.rstrip())

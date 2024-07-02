@@ -1,6 +1,8 @@
-from dztools.misc.xyz_help import calc_center2
+from typing import Annotated
+
 import typer
-from typing_extensions import Annotated
+
+from dztools.misc.xyz_help import calc_center2
 
 
 def center_periodic(
@@ -14,7 +16,7 @@ def center_periodic(
     atoms = None
     cnt = 0
     center = [0, 0, 0]
-    with open(i, "r") as read:
+    with open(i) as read:
         with open(o, "w") as write:
             while True:
                 # read frame header

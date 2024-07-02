@@ -1,6 +1,6 @@
-import typer
-from typing_extensions import Annotated
+from typing import Annotated
 
+import typer
 
 COLS = [
     "#1f77b4",
@@ -34,7 +34,6 @@ def plot(
 
     if sci:
         import scienceplots
-
         plt.style.use("science")
 
     for file in i:
