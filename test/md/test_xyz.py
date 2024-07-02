@@ -19,8 +19,7 @@ def test_center_periodic(tmp_path):
     tocenter = str(HERE) + '/files/conf.xyz'
     outfile = str(folder) + '/conf_c.xyz'
 
-    input = ['-i', tocenter, '-o', outfile, '-c', '12.4138', '-idx', '2']
-    center_periodic(input)
+    center_periodic(i=tocenter, o=outfile, c=12.4138, idx=2)
 
     rip = []
     with open(outfile) as read:
