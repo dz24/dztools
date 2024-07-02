@@ -1,4 +1,5 @@
 """The functions to be used to run dztools via the terminal."""
+
 import pathlib
 import sys
 import typer
@@ -12,11 +13,15 @@ MAPPER = get_mapper(FOLDERS, MOD_PATH)
 MAPPER["log"] = log
 
 # log the command
-dzlog(' '.join(sys.argv) + "\n", MOD_PATH)
+dzlog(" ".join(sys.argv) + "\n", MOD_PATH)
 
 # create the typer app
-app = typer.Typer(no_args_is_help=True, help='ape', epilog='katt',
-                  context_settings={"help_option_names": ["-h", "--help"]})
+app = typer.Typer(
+    no_args_is_help=True,
+    help="ape",
+    epilog="katt",
+    context_settings={"help_option_names": ["-h", "--help"]},
+)
 
 # decorating imported mapper functions
 for func in MAPPER.values():

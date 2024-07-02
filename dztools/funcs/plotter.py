@@ -15,12 +15,15 @@ COLS = [
     "#17becf",
 ]
 
+
 def plot(
     i: Annotated[list[str], typer.Option("-i", help="input")],
     log: Annotated[bool, typer.Option("-log", help="input")] = False,
     sci: Annotated[bool, typer.Option("-sci", help="input")] = False,
     avg: Annotated[bool, typer.Option("-avg", help="input")] = False,
-    hl: Annotated[list[float], typer.Option("-hl", help="horizontal lines")] = [],
+    hl: Annotated[
+        list[float], typer.Option("-hl", help="horizontal lines")
+    ] = [],
     dim: Annotated[list[int], typer.Option("-dim", help="number of.")] = [1],
 ):
     """
@@ -29,9 +32,9 @@ def plot(
     import matplotlib.pyplot as plt
     import numpy as np
 
-
     if sci:
         import scienceplots
+
         plt.style.use("science")
 
     for file in i:

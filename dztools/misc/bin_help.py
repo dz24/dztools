@@ -7,15 +7,19 @@ from os.path import basename, isfile
 
 MAXLINES = 100
 
+
 def is_mod_function(mod, func):
-    ' checks that func is a function defined in module mod '
+    "checks that func is a function defined in module mod"
     return isfunction(func) and getmodule(func) == mod
 
 
 def list_functions(mod):
-    ' list of functions defined in module mod '
-    return [func.__name__ for func in mod.__dict__.values()
-            if is_mod_function(mod, func)]
+    "list of functions defined in module mod"
+    return [
+        func.__name__
+        for func in mod.__dict__.values()
+        if is_mod_function(mod, func)
+    ]
 
 
 def get_mapper(folders, mod_path):
@@ -37,7 +41,7 @@ def get_mapper(folders, mod_path):
             # get functions
             all_funcs = {i[0]: i[1] for i in getmembers(mod, isfunction)}
             for func in funcs:
-                mapper[func] = all_funcs[func] # func[1]
+                mapper[func] = all_funcs[func]  # func[1]
     return mapper
 
 
@@ -60,6 +64,6 @@ def log():
     """"""
     mod_path = str(pathlib.Path(__file__).parent.resolve())
     log_path = mod_path + "/.log"
-    with open(log_path, 'r') as read:
+    with open(log_path, "r") as read:
         for line in read:
             print(line.rstrip())

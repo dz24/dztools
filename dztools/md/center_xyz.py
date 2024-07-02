@@ -2,21 +2,24 @@ from dztools.misc.xyz_help import calc_center2
 import typer
 from typing_extensions import Annotated
 
+
 def center_periodic(
     i: Annotated[str, typer.Option("-i", help="input")],
     o: Annotated[str, typer.Option("-o", help="output")],
     c: Annotated[float, typer.Option("-c", help="The length of a cubic cell")],
-    idx: Annotated[int, typer.Option("-idx", help="The particle idxes at center")],
+    idx: Annotated[
+        int, typer.Option("-idx", help="The particle idxes at center")
+    ],
 ):
     atoms = None
     cnt = 0
     center = [0, 0, 0]
-    with open(i, 'r') as read:
-        with open(o, 'w') as write:
+    with open(i, "r") as read:
+        with open(o, "w") as write:
             while True:
                 # read frame header
                 header = [read.readline(), read.readline()]
-                if all(i == '' for i in header):
+                if all(i == "" for i in header):
                     break
                 atoms = int(header[0].rstrip())
 
@@ -28,7 +31,7 @@ def center_periodic(
 
                 # center xyzs
                 if cnt == 0:
-                    center = xyzs[idx-1][1:]
+                    center = xyzs[idx - 1][1:]
                 xyzs_c = calc_center2(center, xyzs, c)
 
                 # write frame
