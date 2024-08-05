@@ -21,9 +21,10 @@ dzlog(" ".join(sys.argv) + "\n", MOD_PATH)
 # create the typer app
 app = typer.Typer(
     no_args_is_help=True,
-    help="ape",
+    help="dz24's dztools CLI :monkey: :smile:",
     epilog="katt",
     context_settings={"help_option_names": ["-h", "--help"]},
+    rich_markup_mode="rich",
 )
 
 # decorating imported mapper functions
