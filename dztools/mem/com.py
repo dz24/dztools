@@ -17,7 +17,6 @@ def com_6met(
 
     # load gro and xtc into MDA
     u = mda.Universe(gro, xtc)
-    # u.load_new(xtc)
 
     # Select individual proteins and membrane
     protein = u.select_atoms("protein")
@@ -34,7 +33,6 @@ def com_6met(
         box_z.append(ts.dimensions[2])
         lcoms_z.append(lipid.atoms.center_of_mass()[-1])
         for idx0, mel in enumerate(mels):
-            # mel.unrwap(compound='fragments')
             pcoms_z1[idx0].append(mel.center_of_mass(unwrap=True)[-1])
 
     # change to np array
@@ -45,31 +43,16 @@ def com_6met(
     # calculate CVs
     CV0 = lcoms_z*0
     for pcom in pcoms_z2:
-    #     CV0 += np.abs(box_z/2-(pcom-lcoms_z[0]))
         CV0 += abs(pcom - lcoms_z)
     CV0 = CV0/6
 
     # plot
-    delta = 0 # lcoms_z[0]#  - box_z/2
     plt.plot(idxs, lcoms_z , color='k', lw=2.0)
     plt.plot(idxs, lcoms_z + 20, color='k', ls='--', lw=2.0, alpha=0.2)
     plt.plot(idxs, lcoms_z - 20, color='k', ls='--', lw=2.0, alpha=0.2)
-    # plt.plot(idxs, box_z/2, color='k', lw=2.0)
-    # plt.plot(idxs, lcoms_z+box_z - delta, color='C0', lw=2.0)
     for i in range(6):
-        plt.plot(idxs, pcoms_z2[i] - delta , c=f"C{i+1}", label=f"p{i+1}",
+        plt.plot(idxs, pcoms_z2[i], c=f"C{i+1}", label=f"p{i+1}",
                  alpha=0.2)
         plt.plot(idxs, abs(pcoms_z2[i] - lcoms_z)+ lcoms_z, c=f"C{i+1}", label=f"p{i+1}")
     plt.plot(idxs, CV0 + lcoms_z , ls='--', color='k', lw=2.0)
     plt.show()
-    exit()
-
-    # change to np array ##, shift and add pbc
-    newzzero = lcoms_z[0]
-    box_z = np.array(box_z)
-    # lcoms_z = np.array(lcoms_z) - newzzero
-    lcoms_z = np.array(lcoms_z)
-    plt.plot(idxs, lcoms_z, color='C0', lw=2.0)
-    plt.legend(frameon=False)
-    plt.show()
-    print('whadab', len(u.trajectory))
