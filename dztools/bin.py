@@ -7,9 +7,13 @@ import typer
 
 from dztools.misc.bin_help import dzlog, get_mapper, log
 
+# avoids the automatic func_name -> func-name conversion.
+# https://github.com/fastapi/typer/issues/341#issuecomment-1687580973
+typer.main.get_command_name = lambda name: name
+
 # define constants
 MOD_PATH = str(pathlib.Path(__file__).parent.resolve())
-FOLDERS = ["funcs", "md"]
+FOLDERS = ["funcs", "md", "mem"]
 MAPPER = get_mapper(FOLDERS, MOD_PATH)
 
 # # manually add function from other folder
@@ -21,10 +25,9 @@ dzlog(" ".join(sys.argv) + "\n", MOD_PATH)
 # create the typer app
 app = typer.Typer(
     no_args_is_help=True,
-    help="dz24's dztools CLI :monkey: :smile:",
+    help="dz24's dztools CLI",
     epilog="katt",
     context_settings={"help_option_names": ["-h", "--help"]},
-    rich_markup_mode="rich",
 )
 
 # decorating imported mapper functions
