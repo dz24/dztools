@@ -36,19 +36,32 @@ def com_6met(
         for idx0, mel in enumerate(mels):
             pcoms_z1[idx0].append(mel.center_of_mass()[-1])
 
-        if idx == 50:
-            break
-
     # change to np array
-    lcoms_z, pcoms_z2 = np.array(lcoms_z), []
+    lcoms_z, box_z, pcoms_z2 = np.array(lcoms_z), np.array(box_z), []
     for idx0, pcom_z in enumerate(pcoms_z1):
         pcoms_z2.append(np.array(pcom_z))
-        # plt.plot(idxs, pcoms_z2[-1], c=f"C{idx0+1}", label=f"p{idx0+1}")
-        pcoms_z2[-1] += (lcoms_z - pcoms_z2[-1] > 0)*box_z
-        plt.plot(idxs, pcoms_z2[-1]- lcoms_z[0], c=f"C{idx0+1}", label=f"p{idx0+1}")
-        # plt.plot(idxs, np.abs(np.array(pcom_z)), c=f"C{idx0+1}", label=f"p{idx0+1}")
-    plt.plot(idxs, lcoms_z - lcoms_z[0], color='C0', lw=2.0)
-    plt.plot(idxs, lcoms_z+box_z - lcoms_z[0], color='C0', lw=2.0)
+        # apply pbc
+        # pcoms_z2[-1] += (lcoms_z - pcoms_z2[-1] > 0)*box_z
+
+    # calculate CVs
+    CV0 = lcoms_z*0
+    for pcom in pcoms_z2:
+    #     CV0 += np.abs(box_z/2-(pcom-lcoms_z[0]))
+        CV0 += abs(pcom - lcoms_z)
+    CV0 = CV0/6
+
+    # plot
+    delta = 0 # lcoms_z[0]#  - box_z/2
+    plt.plot(idxs, lcoms_z - delta, color='C0', lw=2.0)
+    plt.plot(idxs, lcoms_z + 20, color='C0', lw=2.0, alpha=0.2)
+    plt.plot(idxs, lcoms_z - 20, color='C0', lw=2.0, alpha=0.2)
+    plt.plot(idxs, box_z/2, color='k', lw=2.0)
+    # plt.plot(idxs, lcoms_z+box_z - delta, color='C0', lw=2.0)
+    for i in range(6):
+        plt.plot(idxs, pcoms_z2[i] - delta , c=f"C{i+1}", label=f"p{i+1}",
+                 alpha=0.2)
+        plt.plot(idxs, abs(pcoms_z2[i] - lcoms_z)+ lcoms_z, c=f"C{i+1}", label=f"p{i+1}")
+    plt.plot(idxs, CV0 + lcoms_z , ls='--', color='k', lw=2.0)
     plt.show()
     exit()
 
@@ -58,22 +71,6 @@ def com_6met(
     # lcoms_z = np.array(lcoms_z) - newzzero
     lcoms_z = np.array(lcoms_z)
     plt.plot(idxs, lcoms_z, color='C0', lw=2.0)
-    # pcoms_z2 = []
-    # for idx0, pcom_z in enumerate(pcoms_z1):
-    #     plt.plot(idxs, np.abs(np.array(pcom_z)), c=f"C{idx0+1}", label=f"p{idx0+1}")
-    #     pcoms_z2.append(np.array(pcom_z) - newzzero)
-    #     # add pbc
-    #     print('dawg', sum(pcoms_z2[-1]<0))
-    #     pcoms_z2[-1] += (pcoms_z2[-1]<0)*box_z
-    #     exit('dog')
-
-    # plt.plot(idxs, np.array(lcoms_z)*0, color='C0', lw=2.0)
-    # plt.plot(idxs, np.array(box_z)*0+20, ls='--', color='k', lw=2.0)
-    # plt.plot(idxs, np.array(box_z)*0-20, ls='--', color='k', lw=2.0)
-    # plt.plot(idxs, np.array(box_z), color='C0', lw=2.0)
-    # plt.plot(idxs, -np.array(box_z), color='C0', lw=2.0)
-    # for i in range(6):
-    #     plt.plot(idxs, np.abs(np.array(pcoms_z[0])-lcoms_z), c=f"C{i+1}", label=f"p{i+1}")
     plt.legend(frameon=False)
     plt.show()
     print('whadab', len(u.trajectory))
