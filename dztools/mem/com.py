@@ -2,15 +2,13 @@ from typing import Annotated
 
 import typer
 
-from dztools.misc.xyz_help import calc_center2
-
 
 def com_6met(
     gro: Annotated[str, typer.Option("-gro", help="gro file")],
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
     lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "POPC",
 ):
-    """Currently for 6MEL system only."""
+    """Currently for MEL system only."""
     import MDAnalysis as mda
     import matplotlib.pyplot as plt
     import numpy as np
@@ -20,14 +18,16 @@ def com_6met(
 
     # Select individual proteins and membrane
     protein = u.select_atoms("protein")
-    melres = int(len(protein.residues)/6)
+    nores = 26
+    noprot = int(len(protein.residues)/nores)
+    print(len(protein.residues))
     mels = []
-    for i in range(6):
-        mels.append(protein.residues[melres*i:melres*(i+1)])
+    for i in range(noprot):
+        mels.append(protein.residues[nores*i:nores*(i+1)])
     lipid   = u.select_atoms(f"resname {lip}")
 
     # define idxs and coms and iterate over all xtc frames
-    idxs, box_z, lcoms_z, pcoms_z1 = [], [], [], [[] for _ in range(6)]
+    idxs, box_z, lcoms_z, pcoms_z1 = [], [], [], [[] for _ in range(noprot)]
     for idx, ts in enumerate(u.trajectory):
         idxs.append(idx)
         box_z.append(ts.dimensions[2])
@@ -44,15 +44,18 @@ def com_6met(
     CV0 = lcoms_z*0
     for pcom in pcoms_z2:
         CV0 += abs(pcom - lcoms_z)
-    CV0 = CV0/6
+    CV0 = -CV0/noprot
 
     # plot
     plt.plot(idxs, lcoms_z , color='k', lw=2.0)
+    plt.plot(idxs, lcoms_z + box_z/2, color='k', ls='--', lw=2.0)
+    plt.plot(idxs, lcoms_z - box_z/2, color='k', ls='--', lw=2.0)
     plt.plot(idxs, lcoms_z + 20, color='k', ls='--', lw=2.0, alpha=0.2)
     plt.plot(idxs, lcoms_z - 20, color='k', ls='--', lw=2.0, alpha=0.2)
-    for i in range(6):
+    for i in range(noprot):
         plt.plot(idxs, pcoms_z2[i], c=f"C{i+1}", label=f"p{i+1}",
                  alpha=0.2)
-        plt.plot(idxs, abs(pcoms_z2[i] - lcoms_z)+ lcoms_z, c=f"C{i+1}", label=f"p{i+1}")
-    plt.plot(idxs, CV0 + lcoms_z , ls='--', color='k', lw=2.0)
+        plt.plot(idxs, -abs(pcoms_z2[i] - lcoms_z)+ lcoms_z, c=f"C{i+1}",
+                 label=f"p{i+1}", alpha=0.2)
+    plt.plot(idxs, CV0 + lcoms_z, color='r', lw=2.0)
     plt.show()

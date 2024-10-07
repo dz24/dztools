@@ -40,8 +40,12 @@ def test_dz_center_periodic(tmp_path):
 
     tocenter = str(HERE) + '/files/conf.xyz'
     outfile = str(folder) + '/conf_c.xyz'
-    testargs = ["center-periodic", "-i", tocenter, "-o", outfile, "-c", "12.4138", "-idx", "2"]
+    testargs = ["center_periodic", "-i", tocenter, "-o", outfile, "-c", "12.4138", "-idx", "2"]
     result = runner.invoke(app, testargs)
+    print('wrog', folder)
+    print('wrog', tocenter)
+    print('wrog', outfile)
+    print('frog', result.exit_code)
     assert result.exit_code == 0
 
     rip = []
