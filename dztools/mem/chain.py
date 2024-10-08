@@ -8,6 +8,10 @@ def mem_chain(
     gro: Annotated[str, typer.Option("-gro", help="gro file")],
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
     lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "POPC",
+    coord_n: Annotated[int, typer.Option("-lip", help="n")] = 26,
+    coord_d: Annotated[float, typer.Option("-lip", help="xtc file")] = 0.1,
+    coord_r: Annotated[float, typer.Option("-lip", help="xtc file")] = 0.9,
+    coord_z: Annotated[float, typer.Option("-lip", help="xtc file")] = 0.75,
 ):
     """Currently for MEL system only."""
     import matplotlib.pyplot as plt
@@ -19,22 +23,26 @@ def mem_chain(
     # load gro and xtc into MDA
     u = mda.Universe(gro, xtc)
 
-    # Select individual proteins and membrane
-    protein = u.select_atoms("protein")
-    nores = 26
-    noprot = int(len(protein.residues)/nores)
-    print(len(protein.residues))
-    mels = []
-    for i in range(noprot):
-        print(nores*i, nores*(i+1), f"name CA and resnum {nores*i}-{nores*(i+1)}")
-        h = hel.HELANAL(u, select=f"name CA and resid {nores*i}:{nores*(i+1)}").run()
-        # h = hel.HELANAL(u, select=f"resid {nores*i}:{nores*(i+1)} and name CA", ref_axis=[0, 0, 1])
-        print('boomer 1', dir(h))
-        print('boomer 2', h.results)
-        return
-        plt.plot(h.results.local_twists.mean(axis=1))
-        plt.xlabel('Frame')
-        plt.ylabel('Average twist (degrees)')
+    # group:
+
+    # for idx, ts in enumerate(u.trajectory):
+
+    # # Select individual proteins and membrane
+    # protein = u.select_atoms("protein")
+    # nores = 26
+    # noprot = int(len(protein.residues)/nores)
+    # print(len(protein.residues))
+    # mels = []
+    # for i in range(noprot):
+    #     print(nores*i, nores*(i+1), f"name CA and resnum {nores*i}-{nores*(i+1)}")
+    #     h = hel.HELANAL(u, select=f"name CA and resid {nores*i}:{nores*(i+1)}").run()
+    #     # h = hel.HELANAL(u, select=f"resid {nores*i}:{nores*(i+1)} and name CA", ref_axis=[0, 0, 1])
+    #     print('boomer 1', dir(h))
+    #     print('boomer 2', h.results)
+    #     return
+    #     plt.plot(h.results.local_twists.mean(axis=1))
+    #     plt.xlabel('Frame')
+    #     plt.ylabel('Average twist (degrees)')
 
         # hel.HELANAL(u, select=protein.residues[nores*i:nores*(i+1)])
         # mels.append(protein.residues[nores*i:nores*(i+1)])

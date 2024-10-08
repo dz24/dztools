@@ -17,22 +17,32 @@ def helicity(
     import MDAnalysis as mda
     from MDAnalysis.analysis.dssp import DSSP
 
-    u = mda.Universe(gro)
-    s = DSSP(u).run().results.dssp[0]
+    u = mda.Universe(gro, xtc)
 
-    stride = "/home/daniel/Documents/programs/stride/stride"
-    out = subprocess.run([stride, gro], capture_output=True, text=True)
-    resi = []
-    head = True
+    protein = u.select_atoms("protein")
+    nores = 26
+    noprot = int(len(protein.residues)/nores)
+    # print(len(protein.residues))
 
-    for line in out.stdout.rstrip().split("\n"):
-        if head:
-            if "---Residue---" in line:
-                head = False
-            continue
-        cut = line.rstrip().split()
-        resi.append(1 if cut[6]=="AlphaHelix" else 0)
+    s = DSSP(u).run().results.dssp
+    print(len(s))
+    print(s[0])
+    print(s[-1])
 
-    print('tiger a', sum(resi), len(resi))
-    print('tiger b', sum(np.array(s)=='H'), len(s))
+    exit('a')
+
+
+
+    mels = []
+    for i in range(noprot):
+        mels.append(protein.residues[nores*i:nores*(i+1)])
+
+    for idx, ts in enumerate(u.trajectory):
+
+        # DSSP(u).run().results.dssp[0]
+        # s = DSSP(u).run().results.dssp[0]
+        s = DSSP(mels[0]).run().results.dssp[0]
+
+    # print('tiger a', sum(resi), len(resi))
+        print('tiger b', sum(np.array(s)=='H'), len(s))
     return sum(resi)/(len(resi)-2)

@@ -3,10 +3,10 @@ from typing import Annotated
 import typer
 
 
-def com_6met(
-    gro: Annotated[str, typer.Option("-gro", help="gro file")],
+def com_met(
+    pdb: Annotated[str, typer.Option("-pdb", help="pdb file")],
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
-    lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "POPC",
+    lip: Annotated[str, typer.Option("-lip", help="lip file")] = "POPC",
 ):
     """Currently for MEL system only."""
     import MDAnalysis as mda
@@ -14,16 +14,27 @@ def com_6met(
     import numpy as np
 
     # load gro and xtc into MDA
-    u = mda.Universe(gro, xtc)
+    u = mda.Universe(pdb, xtc)
+    # protein = u.select_atoms('protein')
+    # for ts in u.trajectory:
+    #     protein.unwrap(compound='fragments')
 
+    # exit('a')
     # Select individual proteins and membrane
+    # print(protein.atoms.center_of_mass(unwrap=True))
     protein = u.select_atoms("protein")
     nores = 26
     noprot = int(len(protein.residues)/nores)
-    print(len(protein.residues))
     mels = []
     for i in range(noprot):
-        mels.append(protein.residues[nores*i:nores*(i+1)])
+        # mels.append(protein.residues[nores*i:nores*(i+1)])
+        # mels.append(protein.residues[nores*i:nores*(i+1)])
+        mels.append(u.select_atoms(f"resid {nores*i}:{nores*(i+1)}"))
+        print("tiger", type(protein), type(mels[-1]))
+        protein.atoms.center_of_mass(unwrap=True)
+        mels[-1].atoms.center_of_mass(unwrap=True)
+        # protein.unwrap(compound="fragments")
+        # mels[-1].unrwap(compound="fragments")
     lipid   = u.select_atoms(f"resname {lip}")
 
     # define idxs and coms and iterate over all xtc frames
