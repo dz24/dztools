@@ -2,15 +2,17 @@ from typing import Annotated
 
 import typer
 
+import numpy as np
+
 """ Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
 
 
 def mem_chain(
-    gro: Annotated[str, typer.Option("-gro", help="gro file")],
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
     lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "POPC",
-    coord_n: Annotated[int, typer.Option("-lip", help="n")] = 26,
-    coord_d: Annotated[float, typer.Option("-lip", help="xtc file")] = 0.1,
+    coord_n: Annotated[int, typer.Option("-lip", help="n")] = 26, # ns
+    coord_d: Annotated[float, typer.Option("-lip", help="xtc file")] = 0.1*10,
     coord_r: Annotated[float, typer.Option("-lip", help="xtc file")] = 0.9,
     coord_z: Annotated[float, typer.Option("-lip", help="xtc file")] = 0.75,
 ):
@@ -21,66 +23,111 @@ def mem_chain(
     import MDAnalysis as mda
     from MDAnalysis.analysis import helix_analysis as hel
 
-    # load gro and xtc into MDA
-    u = mda.Universe(gro, xtc)
+    # load top and xtc into MDA
+    u = mda.Universe(top, xtc)
+    hoxys = u.select_atoms("name OH2 O11 O12 O13 O14")
+    lipid = u.select_atoms(f"resname POPC")
+
+    for idx, ts in enumerate(u.trajectory):
+        z_mem = lipid.atoms.center_of_mass()[-1]
+        z_s = [z_mem + (s + 1/2 - coord_n)*coord_d for s in range(coord_n)]
+        box = ts.dimensions
+
+        nsp = [0 for i in range(coord_n)]
+        f_norm = [0 for i in range(coord_n)]
+        fx_acc_s = [0 for i in range(coord_n)]
+        fx_acc_c = [0 for i in range(coord_n)]
+        fy_acc_s = [0 for i in range(coord_n)]
+        fy_acc_c = [0 for i in range(coord_n)]
+        ws_cyl = [0 for i in range(coord_n)]
+        theta_ix = [0 for i in range(coord_n)]
+        x_sincyl, x_coscyl = 0, 0
+        y_sincyl, y_coscyl = 0, 0
+
+        for s in range(coord_n):
+            for hoxy in hoxys.atoms.positions:
+                fx_acc_s[s] += f_axial(hoxy[-1], z_s[s],
+                                       coord_d)*np.sin(2*np.pi*hoxy[0]/box[0])
+                fx_acc_c[s] += f_axial(hoxy[-1], z_s[s],
+                                       coord_d)*np.cos(2*np.pi*hoxy[0]/box[0])
+                fy_acc_s[s] += f_axial(hoxy[-1], z_s[s],
+                                       coord_d)*np.sin(2*np.pi*hoxy[1]/box[1])
+                fy_acc_c[s] += f_axial(hoxy[-1], z_s[s],
+                                       coord_d)*np.cos(2*np.pi*hoxy[1]/box[1])
+                f_norm[s] += f_axial(hoxy[-1], z_s[s], coord_d)
+            ws_cyl[s] = np.tanh(f_norm[s])
+            print('fl', fy_acc_c[s], f_norm[s])
+            x_sincyl += ws_cyl[s]*fx_acc_s[s]/f_norm[s]
+            x_coscyl += ws_cyl[s]*fx_acc_c[s]/f_norm[s]
+            y_sincyl += ws_cyl[s]*fy_acc_s[s]/f_norm[s]
+            y_coscyl += ws_cyl[s]*fy_acc_c[s]/f_norm[s]
+            # exit('')
+        x_sincyl /= np.sum(ws_cyl)
+        x_coscyl /= np.sum(ws_cyl)
+        y_sincyl /= np.sum(ws_cyl)
+        y_coscyl /= np.sum(ws_cyl)
+        x_cyl = (np.arctan2(-x_sincyl,-x_coscyl) + np.pi)*box[0]/(2*np.pi)
+        y_cyl = (np.arctan2(-x_sincyl,-y_coscyl) + np.pi)*box[0]/(2*np.pi)
+
+
+        print('umba x', box[0], x_cyl)
+        print('umba y', box[1], y_cyl)
+        print('zcom', z_mem)
+
+        exit()
+
+
+
+
+        print(hoxys.atoms.positions)
+        # w_norm =
+        # f_norm =
+        print('chez')
+        exit()
+
+
+    # X_cyl = 
+    # z_com_mem =
+    # z_mem = 
+    # epsilon =
+    # X_cyl = 
+    # Y_cyl = 
+
 
     # group:
 
-    # for idx, ts in enumerate(u.trajectory):
 
-    # # Select individual proteins and membrane
-    # protein = u.select_atoms("protein")
-    # nores = 26
-    # noprot = int(len(protein.residues)/nores)
-    # print(len(protein.residues))
-    # mels = []
-    # for i in range(noprot):
-    #     print(nores*i, nores*(i+1), f"name CA and resnum {nores*i}-{nores*(i+1)}")
-    #     h = hel.HELANAL(u, select=f"name CA and resid {nores*i}:{nores*(i+1)}").run()
-    #     # h = hel.HELANAL(u, select=f"resid {nores*i}:{nores*(i+1)} and name CA", ref_axis=[0, 0, 1])
-    #     print('boomer 1', dir(h))
-    #     print('boomer 2', h.results)
-    #     return
-    #     plt.plot(h.results.local_twists.mean(axis=1))
-    #     plt.xlabel('Frame')
-    #     plt.ylabel('Average twist (degrees)')
+def s_center():
+    print()
 
-    # hel.HELANAL(u, select=protein.residues[nores*i:nores*(i+1)])
-    # mels.append(protein.residues[nores*i:nores*(i+1)])
 
-    # helicity
-    # lipid   = u.select_atoms(f"resname {lip}")
+def psi_switch(x, zeta):
+    if x <= 1:
+        return x*zeta
+    else:
+        b = zeta/(1-zeta)
+        c = (1-zeta)*np.exp(b)
+        return 1 - c*np.exp(-b*x)
 
-    # define idxs and coms and iterate over all xtc frames
-    # idxs, box_z, lcoms_z, pcoms_z1 = [], [], [], [[] for _ in range(noprot)]
-    # for idx, ts in enumerate(u.trajectory):
-    #     idxs.append(idx)
-    #     box_z.append(ts.dimensions[2])
-    #     lcoms_z.append(lipid.atoms.center_of_mass()[-1])
-    #     for idx0, mel in enumerate(mels):
-    #         pcoms_z1[idx0].append(mel.center_of_mass(unwrap=True)[-1])
+# def nsp():
+#     print()
 
-    # # change to np array
-    # lcoms_z, box_z, pcoms_z2 = np.array(lcoms_z), np.array(box_z), []
-    # for idx0, pcom_z in enumerate(pcoms_z1):
-    #     pcoms_z2.append(np.array(pcom_z))
+def theta(x, h):
+    if -1 + h <= x <= 1 - h:
+        return 1
+    elif 1 - h < x < 1 + h:
+        return 1/2 - (3/(4*h))*(x-1) + (1/(4*h**3))*(x-1)**3
+    elif -1 - h < x < -1 + h:
+        return 1/2 + (3/(4*h))*(x+1) - (1/(4*h**3))*(x+1)**3
+    else:
+        # print('pig', x)
+        return 0
 
-    # # calculate CVs
-    # CV0 = lcoms_z*0
-    # for pcom in pcoms_z2:
-    #     CV0 += abs(pcom - lcoms_z)
-    # CV0 = -CV0/noprot
+def f_axial(zi, zs, ds, h=1/4):
+    return theta((zi-zs)/(ds/2),h)
 
-    # # plot
-    # plt.plot(idxs, lcoms_z , color='k', lw=2.0)
-    # plt.plot(idxs, lcoms_z + box_z/2, color='k', ls='--', lw=2.0)
-    # plt.plot(idxs, lcoms_z - box_z/2, color='k', ls='--', lw=2.0)
-    # plt.plot(idxs, lcoms_z + 20, color='k', ls='--', lw=2.0, alpha=0.2)
-    # plt.plot(idxs, lcoms_z - 20, color='k', ls='--', lw=2.0, alpha=0.2)
-    # for i in range(noprot):
-    #     plt.plot(idxs, pcoms_z2[i], c=f"C{i+1}", label=f"p{i+1}",
-    #              alpha=0.2)
-    #     plt.plot(idxs, -abs(pcoms_z2[i] - lcoms_z)+ lcoms_z, c=f"C{i+1}",
-    #              label=f"p{i+1}", alpha=0.2)
-    # plt.plot(idxs, CV0 + lcoms_z, color='r', lw=2.0)
-    # plt.show()
+def f_radial(xi, yi, Xcyl, Ycyl, Rcyl):
+    ri = np.sqrt((xi-Xcyl)**2 + (yi-Ycyl)**2)
+    return theta(ri/Rcyl, h)
+
+        
