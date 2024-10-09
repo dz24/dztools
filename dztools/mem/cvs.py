@@ -10,11 +10,9 @@ def helicity(
     plot: Annotated[str, typer.Option("-plot", help="plot")] = False,
 ):
     """DSSP"""
-    import subprocess
 
-    import MDAnalysis as mda
-    import numpy as np
     import matplotlib.pyplot as plt
+    import MDAnalysis as mda
 
     from dztools.misc.mem_help import calc_helicity
 
@@ -30,7 +28,7 @@ def helicity(
         for hel in hels:
             print(hel)
             plt.plot(idxs, hel, alpha=0.2)
-        plt.plot(idxs, hels_avg, color='r')
+        plt.plot(idxs, hels_avg, color="r")
         plt.show()
 
 
@@ -41,9 +39,8 @@ def com_met(
     plot: Annotated[str, typer.Option("-plot", help="plot")] = True,
 ):
     """Calculates COM. Currently for MEL system only."""
-    import MDAnalysis as mda
     import matplotlib.pyplot as plt
-    import numpy as np
+    import MDAnalysis as mda
 
     from dztools.misc.mem_help import calc_met_com
 
@@ -58,10 +55,16 @@ def com_met(
     if plot:
         for i, pcom in enumerate(pcoms_z):
 
-            plt.plot(idxs, abs(pcom - lcoms_z), c=f"C{i+1}",
-                     label=f"p{i+1}", alpha=0.2)
-        plt.plot(idxs, pcoms_z_avg, color='r', lw=2.0)
+            plt.plot(
+                idxs,
+                abs(pcom - lcoms_z),
+                c=f"C{i+1}",
+                label=f"p{i+1}",
+                alpha=0.2,
+            )
+        plt.plot(idxs, pcoms_z_avg, color="r", lw=2.0)
         plt.show()
+
 
 def hel_com(
     top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
@@ -70,18 +73,17 @@ def hel_com(
     plot: Annotated[str, typer.Option("-plot", help="plot")] = True,
 ):
     """Calculate com vs hel"""
-    import MDAnalysis as mda
     import matplotlib.pyplot as plt
+    import MDAnalysis as mda
     import numpy as np
 
-    from dztools.misc.mem_help import calc_met_com, calc_helicity
+    from dztools.misc.mem_help import calc_helicity, calc_met_com
 
     # load gro and xtc into MDA
     if xtc == "False":
         u = mda.Universe(top)
     else:
         u = mda.Universe(top, xtc)
-    idxs = list(range(len(u.trajectory)))
 
     # get helixes
     hels, hels_avg = calc_helicity(u, num_resi=26)
@@ -93,9 +95,14 @@ def hel_com(
     if plot:
         # for i, pcom in enumerate(pcoms_z):
         for i, (hel, pcom) in enumerate(zip(hels, pcoms_z)):
-            plt.plot(np.array(hel)*100, pcom - lcoms_z, c=f"C{i+1}",
-                     label=f"p{i+1}", alpha=0.2)
-        plt.plot(hels_avg*100, pcoms_z_avg, color='r', ls="--", lw=2.0)
+            plt.plot(
+                np.array(hel) * 100,
+                pcom - lcoms_z,
+                c=f"C{i+1}",
+                label=f"p{i+1}",
+                alpha=0.2,
+            )
+        plt.plot(hels_avg * 100, pcoms_z_avg, color="r", ls="--", lw=2.0)
         plt.xlim([0, 100])
         plt.ylim([0, 40])
         plt.xlabel("Helicity [%]")

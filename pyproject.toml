@@ -36,10 +36,9 @@ pre-commit = "^3.3.3"
 
 [tool.ruff]
 line-length = 79
-select = ["F", "E", "W", "I001", "UP"]
-ignore-init-module-imports = true
+lint.select = ["F", "E", "W", "I001", "UP"]
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.black]

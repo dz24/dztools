@@ -4,6 +4,7 @@ import typer
 
 """ Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
 
+
 def mem_chain(
     gro: Annotated[str, typer.Option("-gro", help="gro file")],
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
@@ -44,8 +45,8 @@ def mem_chain(
     #     plt.xlabel('Frame')
     #     plt.ylabel('Average twist (degrees)')
 
-        # hel.HELANAL(u, select=protein.residues[nores*i:nores*(i+1)])
-        # mels.append(protein.residues[nores*i:nores*(i+1)])
+    # hel.HELANAL(u, select=protein.residues[nores*i:nores*(i+1)])
+    # mels.append(protein.residues[nores*i:nores*(i+1)])
 
     # helicity
     # lipid   = u.select_atoms(f"resname {lip}")
