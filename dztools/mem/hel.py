@@ -7,33 +7,27 @@ def helicity(
     top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")] = None,
     lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "POPC",
+    plot: Annotated[str, typer.Option("-plot", help="plot")] = False,
 ):
-    """STRIDE wrapper."""
+    """DSSP"""
     import subprocess
 
+    import MDAnalysis as mda
     import numpy as np
     import matplotlib.pyplot as plt
 
-    import MDAnalysis as mda
-    from MDAnalysis.analysis.dssp import DSSP
+    from dztools.misc.mem_help import calc_helicity
 
+    # load gro and xtc into MDA
     u = mda.Universe(top, xtc)
 
-    protein = u.select_atoms("protein")
-    nores = 25
-    noprot = int(len(protein.residues)/nores)
-    mels = []
-    print('len', len(protein.residues))
-    for i in range(noprot):
-        # mels.append(u.select_atoms(f"resid {nores*i}:{nores*(i+1)}"))
-        mel = u.select_atoms(f"resid {nores*i}:{nores*(i+1)}")
-        helicity = []
-        x = []
-        for x0, f in enumerate(DSSP(mel).run().results.dssp):
-            heli = sum(np.array(f)=='H')/nores
-            if heli > 0:
-                helicity.append(sum(np.array(f)=='H')/nores)
-                x.append(x0)
-        plt.scatter(x, helicity)
+    # get helixes
+    hels, hels_avg = calc_helicity(u, num_resi=25)
+    idxs = list(range(len(u.trajectory)))
 
-    plt.show()
+    # plot
+    if plot:
+        for hel in hels:
+            plt.plot(idxs, hel, alpha=0.2)
+        plt.plot(idxs, hels_avg, color='r')
+        plt.show()
