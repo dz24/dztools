@@ -15,27 +15,15 @@ def com_met(
 
     # load gro and xtc into MDA
     u = mda.Universe(pdb, xtc)
-    # protein = u.select_atoms('protein')
-    # for ts in u.trajectory:
-    #     protein.unwrap(compound='fragments')
 
-    # exit('a')
     # Select individual proteins and membrane
-    # print(protein.atoms.center_of_mass(unwrap=True))
+    lipid   = u.select_atoms(f"resname {lip}")
     protein = u.select_atoms("protein")
     nores = 26
     noprot = int(len(protein.residues)/nores)
     mels = []
     for i in range(noprot):
-        # mels.append(protein.residues[nores*i:nores*(i+1)])
-        # mels.append(protein.residues[nores*i:nores*(i+1)])
         mels.append(u.select_atoms(f"resid {nores*i}:{nores*(i+1)}"))
-        print("tiger", type(protein), type(mels[-1]))
-        protein.atoms.center_of_mass(unwrap=True)
-        mels[-1].atoms.center_of_mass(unwrap=True)
-        # protein.unwrap(compound="fragments")
-        # mels[-1].unrwap(compound="fragments")
-    lipid   = u.select_atoms(f"resname {lip}")
 
     # define idxs and coms and iterate over all xtc frames
     idxs, box_z, lcoms_z, pcoms_z1 = [], [], [], [[] for _ in range(noprot)]
@@ -44,7 +32,8 @@ def com_met(
         box_z.append(ts.dimensions[2])
         lcoms_z.append(lipid.atoms.center_of_mass()[-1])
         for idx0, mel in enumerate(mels):
-            pcoms_z1[idx0].append(mel.center_of_mass(unwrap=True)[-1])
+            # pcoms_z1[idx0].append(mel.center_of_mass(unwrap=True)[-1])
+            pcoms_z1[idx0].append(mel.center_of_mass()[-1])
 
     # change to np array
     lcoms_z, box_z, pcoms_z2 = np.array(lcoms_z), np.array(box_z), []
