@@ -18,11 +18,11 @@ def calc_met_com(mdau, lip, num_resi):
 
         for i in range(num_prot):
             mel = mdau.select_atoms(f"resid {1+num_resi*i}:{num_resi*(i+1)}")
-            pcoms_z[i].append(mel.center_of_mass()[-1])
+            pcoms_z[i].append(mel.center_of_mass(unwrap=True)[-1])
             pcoms_z_avg[-1] += abs(pcoms_z[i][-1] - lcoms_z[-1])
         pcoms_z_avg[-1] /= num_prot
 
-    return np.array(pcoms_z), np.abs(np.array(pcoms_z_avg)), lcoms_z
+    return abs(np.array(pcoms_z) - lcoms_z), np.abs(np.array(pcoms_z_avg))
 
 
 def calc_helicity(mdau, num_resi):

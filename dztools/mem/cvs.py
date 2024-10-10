@@ -17,7 +17,7 @@ def mem_helicity(
     from dztools.misc.mem_help import calc_helicity
 
     # load gro and xtc into MDA
-    u = mda.Universe(top, xtc)
+    u = mda.Universe(top, xtc, dt=100)
     idxs = list(range(len(u.trajectory)))
 
     # get helixes
@@ -39,7 +39,7 @@ def mem_com(
     top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
     lip: Annotated[str, typer.Option("-lip", help="lip file")] = "POPC",
-    plot: Annotated[str, typer.Option("-plot", help="plot")] = True,
+    plot: Annotated[str, typer.Option("-plot", help="plot")] = "False",
 ):
     """Calculates COM. Currently for MEL system only."""
     import matplotlib.pyplot as plt
@@ -52,65 +52,26 @@ def mem_com(
     idxs = list(range(len(u.trajectory)))
 
     # get coms
-    pcoms_z, pcoms_z_avg, lcoms_z = calc_met_com(u, lip=lip, num_resi=26)
+    pcoms_z, pcoms_z_avg = calc_met_com(u, lip=lip, num_resi=26)
 
     # plot
-    if plot:
+    if "rue" in plot:
         for i, pcom in enumerate(pcoms_z):
 
             plt.plot(
                 idxs,
-                abs(pcom - lcoms_z),
+                pcom,
                 c=f"C{i+1}",
                 label=f"p{i+1}",
                 alpha=0.2,
             )
         plt.plot(idxs, pcoms_z_avg, color="r", lw=2.0)
+        plt.ylabel(r"Delta COM_z [$\AA$]")
+        plt.xlabel("Time")
         plt.show()
 
-
-def mem_hel_com(
-    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
-    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")] = False,
-    lip: Annotated[str, typer.Option("-lip", help="lip file")] = "POPC",
-    plot: Annotated[str, typer.Option("-plot", help="plot")] = True,
-):
-    """Calculate com vs hel"""
-    import matplotlib.pyplot as plt
-    import MDAnalysis as mda
-    import numpy as np
-
-    from dztools.misc.mem_help import calc_helicity, calc_met_com
-
-    # load gro and xtc into MDA
-    if xtc == "False":
-        u = mda.Universe(top)
-    else:
-        u = mda.Universe(top, xtc)
-
-    # get helixes
-    hels, hels_avg = calc_helicity(u, num_resi=26)
-
-    # get coms
-    pcoms_z, pcoms_z_avg, lcoms_z = calc_met_com(u, lip=lip, num_resi=26)
-
-    # plot
-    if plot:
-        # for i, pcom in enumerate(pcoms_z):
-        for i, (hel, pcom) in enumerate(zip(hels, pcoms_z)):
-            plt.plot(
-                np.array(hel) * 100,
-                pcom - lcoms_z,
-                c=f"C{i+1}",
-                label=f"p{i+1}",
-                alpha=0.2,
-            )
-        plt.plot(hels_avg * 100, pcoms_z_avg, color="r", ls="--", lw=2.0)
-        plt.xlim([0, 100])
-        plt.ylim([0, 40])
-        plt.xlabel("Helicity [%]")
-        plt.ylabel("Center Of Mass [z]")
-        plt.show()
+    print('bu', pcoms_z_avg)
+    return pcoms_z_avg
 
 
 def mem_chain(
@@ -141,9 +102,6 @@ def mem_chain(
     hoxys = u.select_atoms(f"name {hoxy}")
     # lipid = u.select_atoms(f"resname POPC")
     lipid = u.select_atoms(f"resname {lip}")
-    # print(hoxys.atoms, hoxy, "name {hoxy}")
-    # print(lipid.atoms)
-    # return 0
     epsilons = []
 
     for idx, ts in enumerate(u.trajectory):
@@ -208,7 +166,47 @@ def mem_chain(
 
 
     return epsilons
-        # print('XYZ', f"{x_cyl:0.2f}", f"{y_cyl:0.2f}", z_mem)
-        # print("min max cylinder", f"{z_s[0]:0.2f}", f"{z_s[-1]:0.2f}")
 
-        # print(idx, epsilon)
+
+def mem_hel_com(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")] = False,
+    lip: Annotated[str, typer.Option("-lip", help="lip file")] = "POPC",
+    plot: Annotated[str, typer.Option("-plot", help="plot")] = True,
+):
+    """Calculate com vs hel"""
+    import matplotlib.pyplot as plt
+    import MDAnalysis as mda
+    import numpy as np
+
+    from dztools.misc.mem_help import calc_helicity, calc_met_com
+
+    # load gro and xtc into MDA
+    if xtc == "False":
+        u = mda.Universe(top)
+    else:
+        u = mda.Universe(top, xtc)
+
+    # get helixes
+    hels, hels_avg = calc_helicity(u, num_resi=26)
+
+    # get coms
+    pcoms_z, pcoms_z_avg, lcoms_z = calc_met_com(u, lip=lip, num_resi=26)
+
+    # plot
+    if plot:
+        # for i, pcom in enumerate(pcoms_z):
+        for i, (hel, pcom) in enumerate(zip(hels, pcoms_z)):
+            plt.plot(
+                np.array(hel) * 100,
+                pcom - lcoms_z,
+                c=f"C{i+1}",
+                label=f"p{i+1}",
+                alpha=0.2,
+            )
+        plt.plot(hels_avg * 100, pcoms_z_avg, color="r", ls="--", lw=2.0)
+        plt.xlim([0, 100])
+        plt.ylim([0, 40])
+        plt.xlabel("Helicity [%]")
+        plt.ylabel("Center Of Mass [z]")
+        plt.show()
