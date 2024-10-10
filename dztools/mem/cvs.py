@@ -26,10 +26,13 @@ def mem_helicity(
     # plot
     if plot:
         for hel in hels:
-            print(hel)
             plt.plot(idxs, hel, alpha=0.2)
         plt.plot(idxs, hels_avg, color="r")
+        plt.ylabel("Helicity [%]")
+        plt.xlabel("Time")
         plt.show()
+
+    return hels_avg
 
 
 def mem_com(
@@ -46,10 +49,11 @@ def mem_com(
 
     # load gro and xtc into MDA
     u = mda.Universe(top, xtc)
+    u.atoms.unwrap()
     idxs = list(range(len(u.trajectory)))
 
     # get coms
-    pcoms_z, pcoms_z_avg, lcoms_z = calc_met_com(u, lip=lip, num_resi=25)
+    pcoms_z, pcoms_z_avg, lcoms_z = calc_met_com(u, lip=lip, num_resi=26)
 
     # plot
     if plot:
@@ -113,11 +117,13 @@ def mem_hel_com(
 def mem_chain(
     top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    hoxy: Annotated[str, typer.Option("-hoxy", help="xtc file")] = "OH2 O11 O12 O13 O14",
     lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "POPC",
     coord_n: Annotated[int, typer.Option("-lip", help="n")] = 26, # ns
     coord_d: Annotated[float, typer.Option("-lip", help="xtc file")] = 0.1*10,
     coord_r: Annotated[float, typer.Option("-lip", help="xtc file")] = 0.9*10,
     coord_z: Annotated[float, typer.Option("-lip", help="xtc file")] = 0.75,
+    plot: Annotated[str, typer.Option("-plot", help="plot")] = False,
 ):
     """Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
     import matplotlib.pyplot as plt
@@ -132,9 +138,14 @@ def mem_chain(
     u = mda.Universe(top, xtc)
     # hoxys = u.select_atoms("name OH2 O11 O12 O13 O14")
     # hoxys = u.select_atoms("name OW O11 O12 O13 O14")
-    hoxys = u.select_atoms("name OW OA OB OC OD")
+    # hoxys = u.select_atoms("name OW OA OB OC OD")
+    hoxys = u.select_atoms(f"name {hoxy}")
     # lipid = u.select_atoms(f"resname POPC")
-    lipid = u.select_atoms(f"resname DMPC")
+    lipid = u.select_atoms(f"resname {lip}")
+    # print(hoxys.atoms, hoxy, "name {hoxy}")
+    # print(lipid.atoms)
+    # return 0
+    epsilons = []
 
     for idx, ts in enumerate(u.trajectory):
         z_mem = lipid.atoms.center_of_mass()[-1]
@@ -189,7 +200,16 @@ def mem_chain(
             epsilon += psi_switch(nsp[s], coord_z)
             # print(f"{s}\t{nsp[s]:.4f}\t{psi_switch(nsp[s], coord_z):.4f}\t\t{x_cyl:0.2f}\t{y_cyl:0.2f}")
         epsilon /= coord_n
+        epsilons.append(epsilon)
+
+    # plot
+    if plot:
+        plt.plot(np.arange(len(epsilons)), epsilons)
+        plt.show()
+
+
+    return epsilons
         # print('XYZ', f"{x_cyl:0.2f}", f"{y_cyl:0.2f}", z_mem)
         # print("min max cylinder", f"{z_s[0]:0.2f}", f"{z_s[-1]:0.2f}")
 
-        print(idx, epsilon)
+        # print(idx, epsilon)
