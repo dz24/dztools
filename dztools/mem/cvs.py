@@ -49,7 +49,6 @@ def mem_com(
 
     # load gro and xtc into MDA
     u = mda.Universe(top, xtc)
-    u.atoms.unwrap()
     idxs = list(range(len(u.trajectory)))
 
     # get coms

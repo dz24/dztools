@@ -2,24 +2,25 @@ def calc_met_com(mdau, lip, num_resi):
     """Calculates individual and average MELITTIN COMS wrt. specified lipid
     membrane."""
     import numpy as np
+    import MDAnalysis as mda
 
     # Select individual proteins and membrane
     lipid = mdau.select_atoms(f"resname {lip}")
     protein = mdau.select_atoms("protein")
-    mels = []
-    for i in range(int(len(protein.residues) / num_resi)):
-        mels.append(mdau.select_atoms(f"resid {num_resi*i}:{num_resi*(i+1)}"))
+    num_prot = len(protein.residues)//num_resi
 
     # define coms and iterate over all xtc frames
     lcoms_z, pcoms_z_avg = [], []
-    pcoms_z = [[] for _ in range(len(mels))]
+    pcoms_z = [[] for _ in range(num_prot)]
     for idx, ts in enumerate(mdau.trajectory):
         pcoms_z_avg.append(0)
         lcoms_z.append(lipid.atoms.center_of_mass()[-1])
-        for idx0, mel in enumerate(mels):
-            pcoms_z[idx0].append(mel.center_of_mass()[-1])
-            pcoms_z_avg[-1] += abs(pcoms_z[idx0][-1] - lcoms_z[-1])
-        pcoms_z_avg[-1] /= len(mels)
+
+        for i in range(num_prot):
+            mel = mdau.select_atoms(f"resid {1+num_resi*i}:{num_resi*(i+1)}")
+            pcoms_z[i].append(mel.center_of_mass()[-1])
+            pcoms_z_avg[-1] += abs(pcoms_z[i][-1] - lcoms_z[-1])
+        pcoms_z_avg[-1] /= num_prot
 
     return np.array(pcoms_z), np.abs(np.array(pcoms_z_avg)), lcoms_z
 
