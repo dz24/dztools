@@ -6,7 +6,7 @@ import typer
 def mem_helicity(
     top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")] = None,
-    lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "POPC",
+    lip: Annotated[str, typer.Option("-lip", help="lipid type")] = "POPC",
     plot: Annotated[str, typer.Option("-plot", help="plot")] = False,
 ):
     """DSSP"""
@@ -38,7 +38,7 @@ def mem_helicity(
 def mem_com(
     top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
-    lip: Annotated[str, typer.Option("-lip", help="lip file")] = "POPC",
+    lip: Annotated[str, typer.Option("-lip", help="lip type")] = "POPC",
     plot: Annotated[str, typer.Option("-plot", help="plot")] = "False",
 ):
     """Calculates COM. Currently for MEL system only."""
@@ -81,10 +81,10 @@ def mem_chain(
         str, typer.Option("-hoxy", help="xtc file")
     ] = "OH2 O11 O12 O13 O14",
     lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "POPC",
-    coord_n: Annotated[int, typer.Option("-coord_n", help="n")] = 26,
-    coord_d: Annotated[float, typer.Option("-coord_d", help="xtc file")] = 1,
-    coord_r: Annotated[float, typer.Option("-coord_r", help="xtc file")] = 9,
-    coord_z: Annotated[float, typer.Option("-coord_z", help="xtc file")] = 0.75,
+    coord_n: Annotated[int, typer.Option("-coord_n")] = 26,
+    coord_d: Annotated[float, typer.Option("-coord_d")] = 1,
+    coord_r: Annotated[float, typer.Option("-coord_r")] = 9,
+    coord_z: Annotated[float, typer.Option("-coord_z")] = 0.75,
     plot: Annotated[int, typer.Option("-plot", help="plot")] = 0,
 ):
     """Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
@@ -96,8 +96,10 @@ def mem_chain(
 
     # load top and xtc into MDA
     u = mda.Universe(top, xtc)
-    # hoxy "name OH2 O11 O12 O13 O14"
-    # hoxy "name OW OA OB OC OD"
+
+    # hoxy examples:
+    # "name OH2 O11 O12 O13 O14"
+    # "name OW OA OB OC OD"
     hoxys = u.select_atoms(f"name {hoxy}")
     lipid = u.select_atoms(f"resname {lip}")
     epsilons = []
@@ -110,11 +112,6 @@ def mem_chain(
         box = ts.dimensions
 
         nsp = [0 for i in range(coord_n)]
-        f_norm = [0 for i in range(coord_n)]
-        fx_acc_s = [0 for i in range(coord_n)]
-        fx_acc_c = [0 for i in range(coord_n)]
-        fy_acc_s = [0 for i in range(coord_n)]
-        fy_acc_c = [0 for i in range(coord_n)]
         ws_cyl = [0 for i in range(coord_n)]
         in_axis = [0 for i in range(coord_n)]
         in_radi = [0 for i in range(coord_n)]
@@ -123,21 +120,18 @@ def mem_chain(
 
         for s in range(coord_n):
             in_axis[s] = f_axial(hoxys.atoms.positions[:, 2], z_s[s], coord_d)
-
-            f_norm[s] = np.sum(in_axis[s])
-            ws_cyl[s] = np.tanh(f_norm[s])
-            if f_norm[s] == 0:
+            f_norm = np.sum(in_axis[s])
+            ws_cyl[s] = np.tanh(f_norm)
+            if f_norm == 0:
                 continue
 
-            fx_acc_s[s] = np.sum( in_axis[s] * np.sin(2 * np.pi * hoxys.atoms.positions[:, 0] / box[0]))
-            fx_acc_c[s] = np.sum( in_axis[s] * np.cos(2 * np.pi * hoxys.atoms.positions[:, 0] / box[0]))
-            fy_acc_s[s] = np.sum( in_axis[s] * np.sin(2 * np.pi * hoxys.atoms.positions[:, 1] / box[1]))
-            fy_acc_c[s] = np.sum( in_axis[s] * np.cos(2 * np.pi * hoxys.atoms.positions[:, 1] / box[1]))
+            ang_x = 2 * np.pi * hoxys.atoms.positions[:, 0] / box[0]
+            ang_y = 2 * np.pi * hoxys.atoms.positions[:, 1] / box[1]
+            x_sincyl += np.sum(in_axis[s] * np.sin(ang_x)) * ws_cyl[s] / f_norm
+            x_coscyl += np.sum(in_axis[s] * np.cos(ang_x)) * ws_cyl[s] / f_norm
+            y_sincyl += np.sum(in_axis[s] * np.sin(ang_y)) * ws_cyl[s] / f_norm
+            y_coscyl += np.sum(in_axis[s] * np.cos(ang_y)) * ws_cyl[s] / f_norm
 
-            x_sincyl += ws_cyl[s] * fx_acc_s[s] / f_norm[s]
-            x_coscyl += ws_cyl[s] * fx_acc_c[s] / f_norm[s]
-            y_sincyl += ws_cyl[s] * fy_acc_s[s] / f_norm[s]
-            y_coscyl += ws_cyl[s] * fy_acc_c[s] / f_norm[s]
         x_sincyl /= np.sum(ws_cyl)
         x_coscyl /= np.sum(ws_cyl)
         y_sincyl /= np.sum(ws_cyl)

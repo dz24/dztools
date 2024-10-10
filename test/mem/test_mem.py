@@ -1,5 +1,5 @@
 import os
-
+"""These values should not change."""
 
 def test_mem_com(tmp_path):
     from dztools.mem.cvs import mem_com
@@ -34,6 +34,7 @@ def test_mem_chain(tmp_path):
     pull_s = os.path.dirname(__file__) + "/data/pull_s.gro"
     pull_e = os.path.dirname(__file__) + "/data/pull_e.gro"
 
+    # mem_chain require the selection of "oxygen-like" atoms.
     hoxy = "OW OA OB OC OD"
     lip = "DMPC"
 
