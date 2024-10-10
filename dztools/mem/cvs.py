@@ -70,43 +70,43 @@ def mem_com(
         plt.xlabel("Time")
         plt.show()
 
-    print('bu', pcoms_z_avg)
+    print("bu", pcoms_z_avg)
     return pcoms_z_avg
 
 
 def mem_chain(
     top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
-    hoxy: Annotated[str, typer.Option("-hoxy", help="xtc file")] = "OH2 O11 O12 O13 O14",
+    hoxy: Annotated[
+        str, typer.Option("-hoxy", help="xtc file")
+    ] = "OH2 O11 O12 O13 O14",
     lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "POPC",
-    coord_n: Annotated[int, typer.Option("-lip", help="n")] = 26, # ns
-    coord_d: Annotated[float, typer.Option("-lip", help="xtc file")] = 0.1*10,
-    coord_r: Annotated[float, typer.Option("-lip", help="xtc file")] = 0.9*10,
-    coord_z: Annotated[float, typer.Option("-lip", help="xtc file")] = 0.75,
-    plot: Annotated[str, typer.Option("-plot", help="plot")] = False,
+    coord_n: Annotated[int, typer.Option("-coord_n", help="n")] = 26,
+    coord_d: Annotated[float, typer.Option("-coord_d", help="xtc file")] = 1,
+    coord_r: Annotated[float, typer.Option("-coord_r", help="xtc file")] = 9,
+    coord_z: Annotated[float, typer.Option("-coord_z", help="xtc file")] = 0.75,
+    plot: Annotated[int, typer.Option("-plot", help="plot")] = 0,
 ):
     """Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
     import matplotlib.pyplot as plt
+    import MDAnalysis as mda
     import numpy as np
 
-    import MDAnalysis as mda
-    from MDAnalysis.analysis import helix_analysis as hel
-
-    from dztools.misc.mem_help import psi_switch, theta, f_axial, f_radial
+    from dztools.misc.mem_help import f_axial, f_radial, psi_switch
 
     # load top and xtc into MDA
     u = mda.Universe(top, xtc)
-    # hoxys = u.select_atoms("name OH2 O11 O12 O13 O14")
-    # hoxys = u.select_atoms("name OW O11 O12 O13 O14")
-    # hoxys = u.select_atoms("name OW OA OB OC OD")
+    # hoxy "name OH2 O11 O12 O13 O14"
+    # hoxy "name OW OA OB OC OD"
     hoxys = u.select_atoms(f"name {hoxy}")
-    # lipid = u.select_atoms(f"resname POPC")
     lipid = u.select_atoms(f"resname {lip}")
     epsilons = []
 
     for idx, ts in enumerate(u.trajectory):
         z_mem = lipid.atoms.center_of_mass()[-1]
-        z_s = [z_mem + (s + 1/2 - coord_n/2)*coord_d for s in range(coord_n)]
+        z_s = [
+            z_mem + (s + 1 / 2 - coord_n / 2) * coord_d for s in range(coord_n)
+        ]
         box = ts.dimensions
 
         nsp = [0 for i in range(coord_n)]
@@ -116,7 +116,6 @@ def mem_chain(
         fy_acc_s = [0 for i in range(coord_n)]
         fy_acc_c = [0 for i in range(coord_n)]
         ws_cyl = [0 for i in range(coord_n)]
-        theta_ix = [0 for i in range(coord_n)]
         in_axis = [0 for i in range(coord_n)]
         in_radi = [0 for i in range(coord_n)]
         x_sincyl, x_coscyl = 0, 0
@@ -130,32 +129,38 @@ def mem_chain(
             if f_norm[s] == 0:
                 continue
 
-            fx_acc_s[s] = np.sum(in_axis[s]*np.sin(2*np.pi*hoxys.atoms.positions[:, 0]/box[0]))
-            fx_acc_c[s] = np.sum(in_axis[s]*np.cos(2*np.pi*hoxys.atoms.positions[:, 0]/box[0]))
-            fy_acc_s[s] = np.sum(in_axis[s]*np.sin(2*np.pi*hoxys.atoms.positions[:, 1]/box[1]))
-            fy_acc_c[s] = np.sum(in_axis[s]*np.cos(2*np.pi*hoxys.atoms.positions[:, 1]/box[1]))
+            fx_acc_s[s] = np.sum( in_axis[s] * np.sin(2 * np.pi * hoxys.atoms.positions[:, 0] / box[0]))
+            fx_acc_c[s] = np.sum( in_axis[s] * np.cos(2 * np.pi * hoxys.atoms.positions[:, 0] / box[0]))
+            fy_acc_s[s] = np.sum( in_axis[s] * np.sin(2 * np.pi * hoxys.atoms.positions[:, 1] / box[1]))
+            fy_acc_c[s] = np.sum( in_axis[s] * np.cos(2 * np.pi * hoxys.atoms.positions[:, 1] / box[1]))
 
-            x_sincyl += ws_cyl[s]*fx_acc_s[s]/f_norm[s]
-            x_coscyl += ws_cyl[s]*fx_acc_c[s]/f_norm[s]
-            y_sincyl += ws_cyl[s]*fy_acc_s[s]/f_norm[s]
-            y_coscyl += ws_cyl[s]*fy_acc_c[s]/f_norm[s]
+            x_sincyl += ws_cyl[s] * fx_acc_s[s] / f_norm[s]
+            x_coscyl += ws_cyl[s] * fx_acc_c[s] / f_norm[s]
+            y_sincyl += ws_cyl[s] * fy_acc_s[s] / f_norm[s]
+            y_coscyl += ws_cyl[s] * fy_acc_c[s] / f_norm[s]
         x_sincyl /= np.sum(ws_cyl)
         x_coscyl /= np.sum(ws_cyl)
         y_sincyl /= np.sum(ws_cyl)
         y_coscyl /= np.sum(ws_cyl)
-        x_cyl = (np.arctan2(-x_sincyl,-x_coscyl) + np.pi)*box[0]/(2*np.pi)
-        y_cyl = (np.arctan2(-y_sincyl,-y_coscyl) + np.pi)*box[1]/(2*np.pi)
+        x_cyl = (
+            (np.arctan2(-x_sincyl, -x_coscyl) + np.pi) * box[0] / (2 * np.pi)
+        )
+        y_cyl = (
+            (np.arctan2(-y_sincyl, -y_coscyl) + np.pi) * box[1] / (2 * np.pi)
+        )
 
-        in_radi = f_radial(hoxys.atoms.positions[:, 0],
-                           hoxys.atoms.positions[:, 1],
-                           x_cyl, y_cyl, coord_r)
+        in_radi = f_radial(
+            hoxys.atoms.positions[:, 0],
+            hoxys.atoms.positions[:, 1],
+            x_cyl,
+            y_cyl,
+            coord_r,
+        )
 
         epsilon = 0
-        # print("Slice\tN_p\tpsi(N_p,z)\tComPBCx\tComPBCy")
-        for s in range(coord_n):# [:4]:
-            nsp[s] = np.sum(in_axis[s]*in_radi)
+        for s in range(coord_n):
+            nsp[s] = np.sum(in_axis[s] * in_radi)
             epsilon += psi_switch(nsp[s], coord_z)
-            # print(f"{s}\t{nsp[s]:.4f}\t{psi_switch(nsp[s], coord_z):.4f}\t\t{x_cyl:0.2f}\t{y_cyl:0.2f}")
         epsilon /= coord_n
         epsilons.append(epsilon)
 
@@ -163,7 +168,6 @@ def mem_chain(
     if plot:
         plt.plot(np.arange(len(epsilons)), epsilons)
         plt.show()
-
 
     return epsilons
 
