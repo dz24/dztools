@@ -41,3 +41,35 @@ def calc_helicity(mdau, num_resi):
         )
 
     return hels, np.average(np.array(hels), axis=0)
+
+
+def psi_switch(x, zeta):
+    import numpy as np
+    if x <= 1:
+        return x*zeta
+    else:
+        b = zeta/(1-zeta)
+        c = (1-zeta)*np.exp(b)
+        return 1 - c*np.exp(-b*x)
+
+def theta(x, h):
+    import numpy as np
+    xnew = np.zeros(len(x))
+
+    # if
+    xnew += (-1 + h <= x) * (x <= 1 - h) * 1
+    # elif
+    xnew += (1 - h < x) * (x < 1 + h) * (1/2 - (3/(4*h))*(x-1) +
+                                         (1/(4*h**3))*(x-1)**3)
+    # elif
+    xnew += (-1 - h < x) * (x < -1 + h) * (1/2 + (3/(4*h))*(x+1) -
+                                           (1/(4*h**3))*(x+1)**3)
+    return xnew
+
+def f_axial(zi, zs, ds, h=1/4):
+    return theta((zi-zs)/(ds/2),h)
+
+def f_radial(xi, yi, Xcyl, Ycyl, Rcyl, h=1/4):
+    import numpy as np
+    ri = np.sqrt((xi-Xcyl)**2 + (yi-Ycyl)**2)
+    return theta(ri/Rcyl, h)
