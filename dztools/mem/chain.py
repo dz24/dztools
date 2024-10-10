@@ -45,29 +45,34 @@ def mem_chain(
         y_sincyl, y_coscyl = 0, 0
 
         for s in range(coord_n):
-            for hoxy in hoxys.atoms.positions:
-                fx_acc_s[s] += f_axial(hoxy[-1], z_s[s],
-                                       coord_d)*np.sin(2*np.pi*hoxy[0]/box[0])
-                fx_acc_c[s] += f_axial(hoxy[-1], z_s[s],
-                                       coord_d)*np.cos(2*np.pi*hoxy[0]/box[0])
-                fy_acc_s[s] += f_axial(hoxy[-1], z_s[s],
-                                       coord_d)*np.sin(2*np.pi*hoxy[1]/box[1])
-                fy_acc_c[s] += f_axial(hoxy[-1], z_s[s],
-                                       coord_d)*np.cos(2*np.pi*hoxy[1]/box[1])
-                f_norm[s] += f_axial(hoxy[-1], z_s[s], coord_d)
+            # in_axis = np.zeros(len(hoxys.atoms.positions))
+            # for i, hoxy in enumerate(hoxys.atoms.positions):
+            #     in_axis[i] = f_axial(hoxy[-1], z_s[s], coord_d)
+
+            in_axis = f_axial(hoxys.atoms.positions[:, 2], z_s[s], coord_d)
+
+            fx_acc_s[s] = np.sum(in_axis*np.sin(2*np.pi*hoxys.atoms.positions[:, 0]/box[0]))
+            fx_acc_c[s] = np.sum(in_axis*np.cos(2*np.pi*hoxys.atoms.positions[:, 0]/box[0]))
+            fy_acc_s[s] = np.sum(in_axis*np.sin(2*np.pi*hoxys.atoms.positions[:, 1]/box[1]))
+            fy_acc_c[s] = np.sum(in_axis*np.cos(2*np.pi*hoxys.atoms.positions[:, 1]/box[1]))
+
+            f_norm[s] = np.sum(in_axis)
             ws_cyl[s] = np.tanh(f_norm[s])
-            print('fl', fy_acc_c[s], f_norm[s])
+            if f_norm[s] == 0:
+                continue
             x_sincyl += ws_cyl[s]*fx_acc_s[s]/f_norm[s]
             x_coscyl += ws_cyl[s]*fx_acc_c[s]/f_norm[s]
             y_sincyl += ws_cyl[s]*fy_acc_s[s]/f_norm[s]
             y_coscyl += ws_cyl[s]*fy_acc_c[s]/f_norm[s]
-            # exit('')
         x_sincyl /= np.sum(ws_cyl)
         x_coscyl /= np.sum(ws_cyl)
         y_sincyl /= np.sum(ws_cyl)
         y_coscyl /= np.sum(ws_cyl)
         x_cyl = (np.arctan2(-x_sincyl,-x_coscyl) + np.pi)*box[0]/(2*np.pi)
-        y_cyl = (np.arctan2(-x_sincyl,-y_coscyl) + np.pi)*box[0]/(2*np.pi)
+        y_cyl = (np.arctan2(-y_sincyl,-y_coscyl) + np.pi)*box[1]/(2*np.pi)
+
+        for s in range(coord_n):
+            in_axis = np.zeros(len(hoxys.atoms.positions))
 
 
         print('umba x', box[0], x_cyl)
@@ -113,6 +118,23 @@ def psi_switch(x, zeta):
 #     print()
 
 def theta(x, h):
+    xnew = np.zeros(len(x))
+
+    # if
+    xnew += (-1 + h <= x) * (x <= 1 - h) * 1
+    # elif
+    xnew += (1 - h < x) * (x < 1 + h) * (1/2 - (3/(4*h))*(x-1) +
+                                         (1/(4*h**3))*(x-1)**3)
+    # elif
+    xnew += (-1 - h < x) * (x < -1 + h) * (1/2 + (3/(4*h))*(x+1) -
+                                           (1/(4*h**3))*(x+1)**3)
+    return xnew
+    if0 = np.in1d(np.where(x[-1 + h <= x]), np.where(x[x <= 1 - h]))
+    print('hug', if0)
+    xnew[if0] = 1
+    exit('a')
+    # xnew[np.where(x
+
     if -1 + h <= x <= 1 - h:
         return 1
     elif 1 - h < x < 1 + h:
