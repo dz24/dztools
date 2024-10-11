@@ -103,15 +103,16 @@ def mem_chain(
     hoxys = u.select_atoms(f"name {hoxy}")
     lipid = u.select_atoms(f"resname {lip}")
     epsilons = []
+    tpi = 2 * np.pi
 
     for idx, ts in enumerate(u.trajectory):
+        # Frame properties
         z_mem = lipid.atoms.center_of_mass()[-1]
-        z_s = [
-            z_mem + (s + 1 / 2 - coord_n / 2) * coord_d for s in range(coord_n)
-        ]
+        atoms_x = hoxys.atoms.positions[:, 0]
+        atoms_y = hoxys.atoms.positions[:, 1]
+        z_s = z_mem + (np.arange(coord_n) + 1 / 2 - coord_n / 2) * coord_d
         box = ts.dimensions
 
-        nsp = [0 for i in range(coord_n)]
         ws_cyl = [0 for i in range(coord_n)]
         in_axis = [0 for i in range(coord_n)]
         in_radi = [0 for i in range(coord_n)]
@@ -125,8 +126,8 @@ def mem_chain(
             if f_norm == 0:
                 continue
 
-            ang_x = 2 * np.pi * hoxys.atoms.positions[:, 0] / box[0]
-            ang_y = 2 * np.pi * hoxys.atoms.positions[:, 1] / box[1]
+            ang_x = tpi * atoms_x / box[0]
+            ang_y = tpi * atoms_y / box[1]
             x_sincyl += np.sum(in_axis[s] * np.sin(ang_x)) * ws_cyl[s] / f_norm
             x_coscyl += np.sum(in_axis[s] * np.cos(ang_x)) * ws_cyl[s] / f_norm
             y_sincyl += np.sum(in_axis[s] * np.sin(ang_y)) * ws_cyl[s] / f_norm
@@ -136,22 +137,12 @@ def mem_chain(
         x_coscyl /= np.sum(ws_cyl)
         y_sincyl /= np.sum(ws_cyl)
         y_coscyl /= np.sum(ws_cyl)
-        x_cyl = (
-            (np.arctan2(-x_sincyl, -x_coscyl) + np.pi) * box[0] / (2 * np.pi)
-        )
-        y_cyl = (
-            (np.arctan2(-y_sincyl, -y_coscyl) + np.pi) * box[1] / (2 * np.pi)
-        )
-
-        in_radi = f_radial(
-            hoxys.atoms.positions[:, 0],
-            hoxys.atoms.positions[:, 1],
-            x_cyl,
-            y_cyl,
-            coord_r,
-        )
+        x_cyl = (np.arctan2(-x_sincyl, -x_coscyl) + np.pi) * box[0] / tpi
+        y_cyl = (np.arctan2(-y_sincyl, -y_coscyl) + np.pi) * box[1] / tpi
+        in_radi = f_radial(atoms_x, atoms_y, x_cyl, y_cyl, coord_r)
 
         epsilon = 0
+        nsp = [0 for i in range(coord_n)]
         for s in range(coord_n):
             nsp[s] = np.sum(in_axis[s] * in_radi)
             epsilon += psi_switch(nsp[s], coord_z)
