@@ -1,8 +1,13 @@
+import os
 import glob
 import importlib
 import pathlib
 from inspect import getmembers, getmodule, isfunction
 from os.path import basename, isfile
+from subprocess import call
+from typing import Annotated
+
+import typer
 
 MAXLINES = 100
 
@@ -59,10 +64,14 @@ def dzlog(command, mod_path):
             write.write(line)
 
 
-def log():
+def log(vi: Annotated[int, typer.Option("-vi")] = 0):
     """"""
     mod_path = str(pathlib.Path(__file__).parent.resolve())
     log_path = mod_path + "/.log"
-    with open(log_path) as read:
-        for line in read:
-            print(line.rstrip())
+    if vi == 1:
+        editor = os.environ.get('EDITOR', 'vim')  # that easy!
+        call([editor, log_path])
+    else:
+        with open(log_path) as read:
+            for line in read:
+                print(line.rstrip())

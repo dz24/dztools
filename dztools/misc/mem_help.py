@@ -1,3 +1,6 @@
+from numba import njit
+import numpy as np
+
 def calc_met_com(mdau, lip, num_resi):
     """Calculates individual and average MELITTIN COMS wrt. specified lipid
     membrane."""
@@ -44,8 +47,8 @@ def calc_helicity(mdau, num_resi):
     return hels, np.average(np.array(hels), axis=0)
 
 
+@njit
 def psi_switch(x, zeta):
-    import numpy as np
     if x <= 1:
         return x*zeta
     else:
@@ -53,8 +56,8 @@ def psi_switch(x, zeta):
         c = (1-zeta)*np.exp(b)
         return 1 - c*np.exp(-b*x)
 
+@njit
 def theta(x, h):
-    import numpy as np
     xnew = np.zeros(len(x))
 
     # if
@@ -67,10 +70,12 @@ def theta(x, h):
                                            (1/(4*h**3))*(x+1)**3)
     return xnew
 
+
+@njit
 def f_axial(zi, zs, ds, h=1/4):
     return theta((zi-zs)/(ds/2),h)
 
+@njit
 def f_radial(xi, yi, Xcyl, Ycyl, Rcyl, h=1/4):
-    import numpy as np
     ri = np.sqrt((xi-Xcyl)**2 + (yi-Ycyl)**2)
     return theta(ri/Rcyl, h)

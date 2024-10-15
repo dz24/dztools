@@ -13,7 +13,7 @@ typer.main.get_command_name = lambda name: name
 
 # define constants
 MOD_PATH = str(pathlib.Path(__file__).parent.resolve())
-FOLDERS = ["funcs", "md", "mem"]
+FOLDERS = ["funcs", "md", "mem", "chem"]
 MAPPER = get_mapper(FOLDERS, MOD_PATH)
 
 # # manually add function from other folder
