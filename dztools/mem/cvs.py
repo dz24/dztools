@@ -105,6 +105,7 @@ def mem_chain(
     epsilons = []
     tpi = 2 * np.pi
 
+    totlen = len(u.trajectory)
     for idx, ts in enumerate(u.trajectory):
         # Frame properties
         z_mem = lipid.atoms.center_of_mass()[-1]
@@ -148,6 +149,7 @@ def mem_chain(
             epsilon += psi_switch(nsp[s], coord_z)
         epsilon /= coord_n
         epsilons.append(epsilon)
+        print(f"frame {idx:5.0f}/{totlen} processeed")
 
     # plot
     if plot:
