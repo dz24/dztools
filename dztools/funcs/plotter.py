@@ -30,17 +30,17 @@ def plot(
     Plot via the terminal using matplotlib.
     """
     import matplotlib.pyplot as plt
+    import matplotlib
+    # matplotlib.use('module://matplotlib-backend-wezterm')
     import numpy as np
 
-    if sci:
-        import scienceplots
-        plt.style.use("science")
-
-    for file in i:
+    for idx, file in enumerate(i):
         data = np.loadtxt(file)
+        alpha = 1 if not avg else 0.2
         for dim0 in dim:
-            plt.plot(data[:, 0], data[:, dim0])
+            plt.plot(data[:, 0], data[:, dim0], alpha=alpha)
         if avg:
+            plt.axhline(np.average(data[:, 1]), color=COLS[idx])
             print(i, np.average(data[:, 1]))
     if log:
         plt.yscale("log")
@@ -49,6 +49,8 @@ def plot(
             plt.axhline(hline, color="k")
 
     if sci:
-        plt.savefig("fig.pdf", bbox_inches="tight")
+        import scienceplots
+        plt.style.use("science")
+        plt.savefig("fig.pdf")
     else:
         plt.show()
