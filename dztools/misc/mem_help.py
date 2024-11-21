@@ -56,21 +56,24 @@ def psi_switch(x, zeta):
 def theta(x, h):
     import numpy as np
     xnew = np.zeros(len(x))
+    # xnew2 = np.zeros(len(x))
 
     # if
     xnew += (-1 + h <= x) * (x <= 1 - h) * 1
+
     # elif
     xnew += (1 - h < x) * (x < 1 + h) * (1/2 - (3/(4*h))*(x-1) +
                                          (1/(4*h**3))*(x-1)**3)
     # elif
     xnew += (-1 - h < x) * (x < -1 + h) * (1/2 + (3/(4*h))*(x+1) -
                                            (1/(4*h**3))*(x+1)**3)
+
     return xnew
 
-def f_axial(zi, zs, ds, h=1/4):
+def f_axial(zi, zs, ds, h=10/10):
     return theta((zi-zs)/(ds/2),h)
 
-def f_radial(xi, yi, Xcyl, Ycyl, Rcyl, h=1/4):
+def f_radial(xi, yi, Xcyl, Ycyl, Rcyl, h=10/10):
     import numpy as np
     ri = np.sqrt((xi-Xcyl)**2 + (yi-Ycyl)**2)
     return theta(ri/Rcyl, h)

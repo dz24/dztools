@@ -35,7 +35,7 @@ def plot(
     import numpy as np
 
     for idx, file in enumerate(i):
-        data = np.loadtxt(file)
+        data = np.loadtxt(file, comments=["@", "#"])
         alpha = 1 if not avg else 0.2
         for dim0 in dim:
             plt.plot(data[:, 0], data[:, dim0], alpha=alpha)
