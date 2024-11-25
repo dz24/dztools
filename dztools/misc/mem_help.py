@@ -70,10 +70,20 @@ def theta(x, h):
 
     return xnew
 
-def f_axial(zi, zs, ds, h=10/10):
+def f_axial(zi, zs, ds, h=1/4):
     return theta((zi-zs)/(ds/2),h)
 
-def f_radial(xi, yi, Xcyl, Ycyl, Rcyl, h=10/10):
+def f_radial(xi, yi, Xcyl, Ycyl, Rcyl, box, pos, h=1/4):
     import numpy as np
+    # import MDAnalysis as mda
+    from MDAnalysis.analysis import distances
     ri = np.sqrt((xi-Xcyl)**2 + (yi-Ycyl)**2)
-    return theta(ri/Rcyl, h)
+    pos[:, 2] = 0
+    #print('clean', type(pos))
+    ri1 = distances.distance_array(np.array([Xcyl, Ycyl, 0]), pos, box=box)
+    for i, j in zip(ri, ri1[0]):
+        d = abs(i-j)
+        print(d < 0.001, abs(i-j))
+    print('clown', ri)
+    print('clown', ri1)
+    return theta(ri1[0]/Rcyl, h)
