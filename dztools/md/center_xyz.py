@@ -1,8 +1,6 @@
 from typing import Annotated
-
 import typer
 
-from dztools.misc.xyz_help import calc_center2
 
 
 def center_periodic(
@@ -13,6 +11,7 @@ def center_periodic(
         int, typer.Option("-idx", help="The particle idxes at center")
     ],
 ):
+    from dztools.misc.xyz_help import calc_center2
     atoms = None
     cnt = 0
     center = [0, 0, 0]

@@ -9,6 +9,7 @@ def mem_helicity(
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")] = None,
     lip: Annotated[str, typer.Option("-lip", help="lipid type")] = "POPC",
     plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
 ):
     """DSSP"""
 
@@ -33,6 +34,11 @@ def mem_helicity(
         plt.xlabel("Time")
         plt.show()
 
+    if out:
+        with open(out, 'w') as write:
+            for idx, cv in zip(np.arange(len(hels_avg)), hels_avg):
+                write.write(f"{idx}\t{cv*100:.08f}\t{cv:.08f}\n")
+
     return hels_avg
 
 
@@ -41,6 +47,7 @@ def mem_com(
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
     lip: Annotated[str, typer.Option("-lip", help="lip type")] = "POPC",
     plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
 ):
     """Calculates COM. Currently for MEL system only."""
 
@@ -72,6 +79,11 @@ def mem_com(
         plt.xlabel("Time")
         plt.show()
 
+    if out:
+        with open(out, 'w') as write:
+            for idx, cv in zip(np.arange(len(pcoms_z_avg)), pcoms_z_avg):
+                write.write(f"{idx}\t{cv:.08f}\n")
+
     return pcoms_z_avg
 
 
@@ -80,11 +92,11 @@ def mem_chain(
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
     hoxy: Annotated[
         str, typer.Option("-hoxy", help="xtc file")
-    ] = "OH2 O11 O12 O13 O14",
+    ] = "O11 O12 O13 O14",
     lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "POPC",
     coord_n: Annotated[int, typer.Option("-coord_n")] = 26,
     coord_d: Annotated[float, typer.Option("-coord_d")] = 1.0,
-    coord_r: Annotated[float, typer.Option("-coord_r")] = 9.0,
+    coord_r: Annotated[float, typer.Option("-coord_r")] = 8.0,
     coord_z: Annotated[float, typer.Option("-coord_z")] = 0.75,
     plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
     out: Annotated[str, typer.Option("-out", help="string")] = "",
@@ -95,10 +107,6 @@ def mem_chain(
     import matplotlib.pyplot as plt
     import numpy as np
     import MDAnalysis as mda
-
-    from mpl_toolkits.mplot3d import Axes3D
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
 
     # load top and xtc into MDA
     u = mda.Universe(top, xtc)
@@ -122,37 +130,19 @@ def mem_chain(
         in_radi = [0 for i in range(coord_n)]
         x_sincyl, x_coscyl = 0, 0
         y_sincyl, y_coscyl = 0, 0
+        ang_xs, ang_xc = np.sin(tpi * atoms_x / box[0]), np.cos(tpi * atoms_x / box[0])
+        ang_ys, ang_yc = np.sin(tpi * atoms_y / box[1]), np.cos(tpi * atoms_y / box[1])
 
-        x_sincyl_s, x_coscyl_s = [0 for i in range(coord_n)], [0 for i in range(coord_n)]
-        y_sincyl_s, y_coscyl_s = [0 for i in range(coord_n)], [0 for i in range(coord_n)]
-        x_cyl_s, y_cyl_s = [0 for i in range(coord_n)], [0 for i in range(coord_n)]
-
-        # plt.axhline(20, ls='--', color='k')
-        # plt.axhline(box[2]-20, ls='--', color='k')
-
-        ang_xs = np.sin(tpi * atoms_x / box[0])
-        ang_xc = np.cos(tpi * atoms_x / box[0])
-        ang_ys = np.sin(tpi * atoms_y / box[1])
-        ang_yc = np.cos(tpi * atoms_y / box[1])
         for s in range(coord_n):
             in_axis[s] = f_axial(hoxys.atoms.positions[:, 2], z_s[s], coord_d)
             f_norm = np.sum(in_axis[s])
             ws_cyl[s] = np.tanh(f_norm)
             if f_norm == 0:
                 continue
-
             x_sincyl += np.sum(in_axis[s] * ang_xs) * ws_cyl[s] / f_norm
             x_coscyl += np.sum(in_axis[s] * ang_xc) * ws_cyl[s] / f_norm
             y_sincyl += np.sum(in_axis[s] * ang_ys) * ws_cyl[s] / f_norm
             y_coscyl += np.sum(in_axis[s] * ang_yc) * ws_cyl[s] / f_norm
-
-            x_sincyl_s[s] = np.sum(in_axis[s] * ang_xs) / f_norm
-            x_coscyl_s[s] = np.sum(in_axis[s] * ang_xc) / f_norm
-            y_sincyl_s[s] = np.sum(in_axis[s] * ang_ys) / f_norm
-            y_coscyl_s[s] = np.sum(in_axis[s] * ang_yc) / f_norm
-
-
-            # print(f"{s:5.0f}\t{sum(in_axis[s]):.3f}\t{f_norm:.03f}\t\t{ws_cyl[s]:.3f}")
 
         x_sincyl /= np.sum(ws_cyl)
         x_coscyl /= np.sum(ws_cyl)
@@ -160,44 +150,17 @@ def mem_chain(
         y_coscyl /= np.sum(ws_cyl)
         x_cyl = (np.arctan2(-x_sincyl, -x_coscyl) + np.pi) * box[0] / tpi
         y_cyl = (np.arctan2(-y_sincyl, -y_coscyl) + np.pi) * box[1] / tpi
-        print('box', box[:3], hoxys.atoms.positions[:, 2][0], x_sincyl)
-
-        for s in range(coord_n):
-            x_cyl_s[s] = (np.arctan2(-x_sincyl_s[s], -x_coscyl_s[s]) + np.pi) * box[0] / tpi
-            y_cyl_s[s] = (np.arctan2(-y_sincyl_s[s], -y_coscyl_s[s]) + np.pi) * box[1] / tpi
-        in_radi = f_radial(atoms_x, atoms_y, x_cyl, y_cyl, coord_r, box, hoxys.atoms.positions)
-        print(atoms_x[0], atoms_y[0], x_cyl, y_cyl, coord_r, np.sum(in_radi))
-
+        print('hunger')
+        in_radi = f_radial(hoxys.atoms.positions, x_cyl, y_cyl, coord_r, box)
         epsilon = 0
         nsp = [0 for i in range(coord_n)]
         for s in range(coord_n):
             nsp[s] = np.sum(in_axis[s] * in_radi)
-            # nsp[s] = np.sum(in_axis[s])
             epsilon += psi_switch(nsp[s], coord_z)
-            if nsp[s] == 0:
-                print(f"{s:5.0f}\t{nsp[s]:7.0f}\t{psi_switch(nsp[s], coord_z):7.0f}\t  nan\t  nan")
-            else:
-                print(f"{s:5.0f}\t{nsp[s]:.5f}\t{psi_switch(nsp[s], coord_z):.5f}\t{x_cyl_s[s]/10:.3f}\t{y_cyl_s[s]/10:.3f}")
-        print("----------------------------------------------------")
-        print("   TOTAL\t\t", epsilon / coord_n, "\n")
-
-        print(f"Cylinder center at (X/Y/Z): {x_cyl/10:.4f} {y_cyl/10:.4f}, {z_mem/10:.4f}")
-        print(f"{z_s[0]/10:.4f}\t{z_s[-1]/10:.4f}")
         epsilon /= coord_n
         epsilons.append(epsilon)
+        print(idx, epsilon)
 
-        for i in range(len(in_axis[0])):
-            a1 = '--' if in_axis[0][i] == 0 else f"{in_axis[0][i]:.2f}"
-            a2 = '--' if in_axis[1][i] == 0 else f"{in_axis[1][i]:.2f}"
-            a3 = '--' if in_axis[2][i] == 0 else f"{in_axis[2][i]:.2f}"
-            # print(f"{i}\t{in_axis[0][i]:.2f}\t{in_axis[1][i]:.2f}\t{in_axis[2][i]:.2f}")
-            print(f"{i}\t{a1}\t{a2}\t{a3}")
-        print('empty', np.sum(in_axis[0]*in_axis[1]))
-        print('empty', np.sum(in_axis[1]*in_axis[2]))
-        print('empty', np.sum(in_axis[2]*in_axis[3]))
-        print('empty', np.sum(in_axis[3]*in_axis[4]))
-        print('empty', np.sum(in_axis[4]*in_axis[5]))
-        # exit()
     # plot
     if plot:
         plt.plot(np.arange(len(epsilons)), epsilons)
@@ -216,7 +179,7 @@ def mem_hel_com(
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")] = False,
     lip: Annotated[str, typer.Option("-lip", help="lip file")] = "POPC",
     plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
-    save: Annotated[bool, typer.Option("-out", help="pdf")] = False,
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
 ):
     """Calculate com vs hel"""
     from dztools.misc.mem_help import calc_helicity, calc_met_com
@@ -256,3 +219,83 @@ def mem_hel_com(
         plt.xlabel("Helicity [%]")
         plt.ylabel("Center Of Mass [z]")
         plt.show()
+
+    if out:
+        with open(out, 'w') as write:
+            for idx, cv in zip(np.arange(len(hels_avg)), hels_avg):
+                write.write(f"{idx}\t{cv:.08f}\n")
+
+
+def met_rsmd(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")]='',
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")] = False,
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
+):
+    """Calculate com vs hel"""
+    from dztools.misc.mem_help import calc_helicity, calc_met_com
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import MDAnalysis as mda
+    from MDAnalysis.analysis.rms import rmsd
+    from dztools.misc.mem_help import calc_helicity
+    import os
+    from MDAnalysis.lib.mdamath import make_whole
+
+    # load gro and xtc into MDA
+    if xtc == "False":
+        u = mda.Universe(top)
+    else:
+        u = mda.Universe(top, xtc)
+
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+
+    met = u.select_atoms("protein").select_atoms("backbone")
+    # print('wii', len(met.atoms))
+    # print('wii', len(met.select_atoms("backbone").atoms))
+    # exit()
+    make_whole(met)
+    base = os.path.dirname(os.path.abspath(__file__))
+    cry_u = mda.Universe(base + "/pdbs/2mlt_proa_h.pdb")
+    # cry_u.dimensions = u.dimensions
+    cry = cry_u.select_atoms("protein").select_atoms("backbone")
+
+    print(met.positions[:, 0])
+    print(cry.positions[:, 0])
+    mmax = max(met.positions[:, 0])
+    cmax = max(cry.positions[:, 0])
+    # plt.plot(np.arange(len(met.positions[:, 0])), met.positions[:, 0]/mmax)
+    # plt.plot(np.arange(len(met.positions[:, 0])), cry.positions[:, 0]/cmax)
+    # plt.show()
+    # exit()
+
+    print("get helixes")
+
+    R = mda.analysis.rms.RMSD(u,cry_u,select="protein")
+    R.run()
+    rmsd = R.results.rmsd.T
+    hels, hels_avg = calc_helicity(u, num_resi=26)
+    print(len(rmsd[1]), len(set(rmsd[1])), len(hels_avg))
+    # plt.plot(np.arange(len(rmsd[1])), rmsd[1])
+    # plt.show()
+    # exit()
+    # plt.plot(rmsd[1], rmsd[2])
+    ax1.plot(np.arange(len(rmsd[1])), rmsd[2], color='C0')
+    ax2.plot(np.arange(len(rmsd[1])), np.array(hels_avg), color='C1')
+    ax1.set_ylabel('rsmd', color='C0')
+    ax2.set_ylabel('heli', color='C1')
+    # plt.scatter(rmsd[1], rmsd[2])
+    # plt.axhline(rsmd0, color='k')
+    plt.show()
+    print(rmsd[1])
+    print(rmsd[2])
+    # idx, rsmd = [], []
+    #for i, ts in enumerate(u.trajectory):
+
+    print("met", len(met.atoms))
+    print("cry", len(cry.atoms))
+
+    if out:
+        with open(out, 'w') as write:
+            for idx, cv in zip(np.arange(len(hels_avg)), hels_avg):
+                write.write(f"{idx}\t{cv:.08f}\n")

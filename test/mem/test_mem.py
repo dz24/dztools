@@ -41,5 +41,5 @@ def test_mem_chain(tmp_path):
     epsilon_s = mem_chain(top=pull_s, xtc=pull_s, hoxy=hoxy, lip=lip)
     epsilon_e = mem_chain(top=pull_e, xtc=pull_e, hoxy=hoxy, lip=lip)
 
-    assert abs(epsilon_s[0] - 0.1901430306128322) < 0.0001
+    assert abs(epsilon_s[0] - 0.18974327318235468) < 0.0001
     assert abs(epsilon_e[0] - 0.7483991044081285) < 0.0001
