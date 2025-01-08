@@ -299,3 +299,143 @@ def met_rsmd(
         with open(out, 'w') as write:
             for idx, cv in zip(np.arange(len(hels_avg)), hels_avg):
                 write.write(f"{idx}\t{cv:.08f}\n")
+
+def mem_gyr(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    num_prot: Annotated[int, typer.Option("-num_prot", help="residue number per protein")] = 20,
+    radius: Annotated[int, typer.Option("-r", help="radius around center")] = 2,
+    plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
+):
+    """Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
+
+    from dztools.misc.mem_help import f_axial, f_radial, psi_switch, gyr_com
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import MDAnalysis as mda
+
+    # load top and xtc into MDA
+    u = mda.Universe(top, xtc)
+    protein = u.select_atoms("protein")
+    num_atoms = len(protein.atoms)//num_prot
+
+    # Get the atom indexes of protein starts and ends
+    idxes = sorted([num_atoms*i for i in range(num_prot)])
+    idxes_e = sorted([num_atoms*(i+1)-1 for i in range(num_prot)])
+    # idx_sort = " ".join(sorted([str(i) for i in idxes1 + idxes2]))
+    idx_sort = " ".join([str(i) for i in idxes])
+    idx_sort_e = " ".join([str(i) for i in idxes_e])
+    print(idx_sort)
+    print(idx_sort_e)
+    atoms = u.select_atoms("index " + idx_sort)
+    atoms_e = u.select_atoms("index " + idx_sort_e)
+
+    for ts in u.trajectory:
+        box = ts.dimensions
+        x_com = gyr_com(atoms, box, 0)
+        y_com = gyr_com(atoms, box, 1)
+        for i in [-1, 0, 1]:
+            for j in [-1, 0, 1]:
+                for idx in range(len(idxes)):
+                    # x0, x1 = atoms.atoms[idx*2].position[0], atoms.atoms[idx*2+1].position[0]
+                    # y0, y1 = atoms.atoms[idx*2].position[1], atoms.atoms[idx*2+1].position[1]
+                    # print(x0, x1, y0, y1)
+                    x0, y0 = atoms.atoms[idx].position[0], atoms.atoms[idx].position[1]
+                    x1, y1 = atoms_e.atoms[idx].position[0], atoms_e.atoms[idx].position[1]
+
+                    plt.plot([x0 + box[0]*i, x1 + box[0]*i], [y0 + box[0]*j, y1 + box[0]*j])
+                    plt.scatter([x0 + box[0]*i], [y0 + box[0]*j])
+
+        plt.plot([-box[0], box[0]*2], [0]*2, ls='--', color='k', alpha=0.5)
+        plt.plot([-box[0], box[0]*2], [box[1]]*2, ls='--', color='k', alpha=0.5)
+        plt.plot([0]*2, [-box[0], box[0]*2], ls='--', color='k', alpha=0.5)
+        plt.plot([box[0]]*2, [-box[0], box[0]*2], ls='--', color='k', alpha=0.5)
+
+        plt.scatter([x_com], [y_com], color='k', s=5000, facecolors="none")
+        plt.scatter([x_com], [y_com], color='k', marker='x')
+
+        plt.plot([x_com-box[0]/2, x_com+box[0]/2], [y_com+box[1]/2]*2, color='r', ls='--', alpha=0.5)
+        plt.plot([x_com-box[0]/2, x_com+box[0]/2], [y_com-box[1]/2]*2, color='r', ls='--', alpha=0.5)
+        plt.plot([x_com-box[0]/2]*2, [y_com-box[1]/2, y_com+box[1]/2], color='r', ls='--', alpha=0.5)
+        plt.plot([x_com+box[0]/2]*2, [y_com-box[1]/2, y_com+box[1]/2], color='r', ls='--', alpha=0.5)
+
+        plt.xlim([-box[0], 2*box[0]])
+        plt.ylim([-box[1], 2*box[1]])
+        ax = plt.gca()
+        ax.set_aspect('equal', adjustable='box')
+        plt.show()
+        exit()
+
+
+    # for i in range(num_resi):
+    #     mel = u.select_atoms(f"resid {1+num_prot*i}:{num_prot*(i+1)}")
+    #     atoms.append(mel.atoms[0])
+    #     atoms.append(mel.atoms[-1])
+
+
+        # print(i, len(mel), f"resid {1+num_resi*i}:{num_resi*(i+1)}", num_prot*(i+1)-(1+num_prot*i))
+#
+#     # lipid = u.select_atoms(f"resname {lip}")
+#     epsilons = []
+#     tpi = 2 * np.pi
+#
+#     totlen = len(u.trajectory)
+#     for idx, ts in enumerate(u.trajectory):
+#         # Frame properties
+#         z_mem = lipid.atoms.center_of_mass()[-1]
+#         z_s = z_mem + (np.arange(coord_n) + 1 / 2 - coord_n / 2) * coord_d
+#         hoxys = u.select_atoms(f"name {hoxy} and prop z < {z_s[-1]+0.5} and prop z > {z_s[0]-0.5}")
+#         atoms_x = hoxys.atoms.positions[:, 0]
+#         atoms_y = hoxys.atoms.positions[:, 1]
+#         box = ts.dimensions
+# 
+#         ws_cyl = [0 for i in range(coord_n)]
+#         in_axis = [0 for i in range(coord_n)]
+#         in_radi = [0 for i in range(coord_n)]
+#         x_sincyl, x_coscyl = 0, 0
+#         y_sincyl, y_coscyl = 0, 0
+#         ang_xs, ang_xc = np.sin(tpi * atoms_x / box[0]), np.cos(tpi * atoms_x / box[0])
+#         ang_ys, ang_yc = np.sin(tpi * atoms_y / box[1]), np.cos(tpi * atoms_y / box[1])
+# 
+#         for s in range(coord_n):
+#             in_axis[s] = f_axial(hoxys.atoms.positions[:, 2], z_s[s], coord_d)
+#             f_norm = np.sum(in_axis[s])
+#             ws_cyl[s] = np.tanh(f_norm)
+#             if f_norm == 0:
+#                 continue
+#             x_sincyl += np.sum(in_axis[s] * ang_xs) * ws_cyl[s] / f_norm
+#             x_coscyl += np.sum(in_axis[s] * ang_xc) * ws_cyl[s] / f_norm
+#             y_sincyl += np.sum(in_axis[s] * ang_ys) * ws_cyl[s] / f_norm
+#             y_coscyl += np.sum(in_axis[s] * ang_yc) * ws_cyl[s] / f_norm
+# 
+#         x_sincyl /= np.sum(ws_cyl)
+#         x_coscyl /= np.sum(ws_cyl)
+#         y_sincyl /= np.sum(ws_cyl)
+#         y_coscyl /= np.sum(ws_cyl)
+#         x_cyl = (np.arctan2(-x_sincyl, -x_coscyl) + np.pi) * box[0] / tpi
+#         y_cyl = (np.arctan2(-y_sincyl, -y_coscyl) + np.pi) * box[1] / tpi
+#         print('hunger')
+#         in_radi = f_radial(hoxys.atoms.positions, x_cyl, y_cyl, coord_r, box)
+#         epsilon = 0
+#         nsp = [0 for i in range(coord_n)]
+#         for s in range(coord_n):
+#             nsp[s] = np.sum(in_axis[s] * in_radi)
+#             epsilon += psi_switch(nsp[s], coord_z)
+#         epsilon /= coord_n
+#         epsilons.append(epsilon)
+#         print(idx, epsilon)
+# 
+#     # plot
+#     if plot:
+#         plt.plot(np.arange(len(epsilons)), epsilons)
+#         plt.show()
+# 
+#     if out:
+#         with open(out, 'w') as write:
+#             for idx, cv in zip(np.arange(len(epsilons)), epsilons):
+#                 write.write(f"{idx}\t{cv:.08f}\n")
+# 
+#     return np.array(epsilons)
+# 
+# 

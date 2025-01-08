@@ -78,3 +78,15 @@ def f_radial(pos, Xcyl, Ycyl, Rcyl, box, h=1/4):
     pos[:, 2] = 0
     ri = distances.distance_array(np.array([Xcyl, Ycyl, 0]), pos, box=box)[0]
     return theta(ri/Rcyl, h)
+
+def gyr_com(atoms, box, dim):
+    import numpy as np
+
+    angle = [2*np.pi*i.position[dim]/box[dim] for i in atoms.atoms]
+    cos, sin =  np.cos(angle), np.sin(angle)
+    avg_cos, avg_sin = np.average(cos), np.average(sin)
+    theta = np.arctan2(-avg_sin, -avg_cos) + np.pi
+    com = box[dim]*theta/(2*np.pi)
+
+    return com
+
