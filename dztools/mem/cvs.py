@@ -92,7 +92,7 @@ def mem_chain(
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
     hoxy: Annotated[
         str, typer.Option("-hoxy", help="xtc file")
-    ] = "O11 O12 O13 O14",
+    ] = "OH2 O11 O12 O13 O14",
     lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "resname POPC",
     coord_n: Annotated[int, typer.Option("-coord_n")] = 26,
     coord_d: Annotated[float, typer.Option("-coord_d")] = 1.0,
@@ -153,7 +153,6 @@ def mem_chain(
         x_cyl = (np.arctan2(-x_sincyl, -x_coscyl) + np.pi) * box[0] / tpi
         y_cyl = (np.arctan2(-y_sincyl, -y_coscyl) + np.pi) * box[1] / tpi
         in_radi = f_radial(hoxys.atoms.positions, x_cyl, y_cyl, coord_r, box, coord_h)
-        print(in_radi)
         epsilon = 0
         nsp = [0 for i in range(coord_n)]
         for s in range(coord_n):
@@ -476,10 +475,65 @@ def mem_gyr(
 def mem_closest(
     top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
-    num_prot: Annotated[int, typer.Option("-num_prot", help="residue number per protein")] = 20,
-    radius: Annotated[int, typer.Option("-r", help="radius around center")] = 2,
+    num: Annotated[int, typer.Option("-num", help="lipid number")] = 10,
     plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
     out: Annotated[str, typer.Option("-out", help="string")] = "",
 ):
-	"""Plot closest lipids to MEMCOM"""
+    """Plot closest lipids to MEMCOM"""
+    import MDAnalysis as mda
+    from MDAnalysis.analysis import distances
+    import numpy as np
+    import matplotlib.pyplot as plt
+
     u = mda.Universe(top, xtc)
+    popc = u.select_atoms("name P")
+    plen = len(popc)//2
+
+    x = []
+    zdeltas = []
+    zmems = []
+    zavgs = {i: [] for i in range(num)}
+    for idx, ts in enumerate(u.trajectory):
+        x.append(idx)
+        box = ts.dimensions
+
+        z_mem = popc.atoms.center_of_mass()[2]
+        posz = sorted(np.abs(popc.atoms.positions[:, 2] - z_mem))
+        maxz = max(posz)
+
+        for i in zavgs.keys():
+            zavgs[i].append(np.average(posz[0:i+1])/maxz)
+            # plt.axhline(zavgs[i][-1])
+
+        # minz, maxz = min(posz), max(posz)
+        # minz2, maxz2 = posz[0], posz[-1]
+        # print(minz, maxz)
+        # print(minz2, maxz2)
+        # plt.plot(list(range(len(posz))), posz/maxz)
+        # plt.show()
+        # exit()
+
+
+        # zmems.append(z_mem[2])
+        # # popc.positions[:, 0] = 0
+        # # popc.positions[:, 1] = 0
+        # pos[:, 0] = 0
+        # pos[:, 1] = 0
+        # print(z_mem[-1])
+        # print(pos)
+        # print(popc.
+        # zdelta = distances.distance_array(pos, np.array([0, 0, z_mem[-1]]), box=box)
+        # zdeltas.append(zdelta)
+
+    for i in zavgs.keys():
+        plt.plot(x, zavgs[i])
+        # zavgs[i].append(np.average(posz[0:i+1])/maxz)
+
+    # zdeltas = np.array(zdeltas)
+    # for i in range(len(popc)):
+    #     plt.plot(x, zdeltas[:, i])
+    # # plt.plot(x, zmems, color="k")
+    plt.show()
+
+
+
