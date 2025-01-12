@@ -93,11 +93,13 @@ def mem_chain(
     hoxy: Annotated[
         str, typer.Option("-hoxy", help="xtc file")
     ] = "O11 O12 O13 O14",
-    lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "POPC",
+    lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "resname POPC",
     coord_n: Annotated[int, typer.Option("-coord_n")] = 26,
     coord_d: Annotated[float, typer.Option("-coord_d")] = 1.0,
     coord_r: Annotated[float, typer.Option("-coord_r")] = 8.0,
     coord_z: Annotated[float, typer.Option("-coord_z")] = 0.75,
+    padding: Annotated[float, typer.Option("-padding")] = 0.5,
+    coord_h: Annotated[float, typer.Option("-coord_h")] = 0.75,
     plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
     out: Annotated[str, typer.Option("-out", help="string")] = "",
 ):
@@ -111,7 +113,7 @@ def mem_chain(
     # load top and xtc into MDA
     u = mda.Universe(top, xtc)
 
-    lipid = u.select_atoms(f"resname {lip}")
+    lipid = u.select_atoms(f"{lip}")
     epsilons = []
     tpi = 2 * np.pi
 
@@ -120,7 +122,7 @@ def mem_chain(
         # Frame properties
         z_mem = lipid.atoms.center_of_mass()[-1]
         z_s = z_mem + (np.arange(coord_n) + 1 / 2 - coord_n / 2) * coord_d
-        hoxys = u.select_atoms(f"name {hoxy} and prop z < {z_s[-1]+0.5} and prop z > {z_s[0]-0.5}")
+        hoxys = u.select_atoms(f"name {hoxy} and prop z < {z_s[-1]+padding} and prop z > {z_s[0]-padding}")
         atoms_x = hoxys.atoms.positions[:, 0]
         atoms_y = hoxys.atoms.positions[:, 1]
         box = ts.dimensions
@@ -150,8 +152,8 @@ def mem_chain(
         y_coscyl /= np.sum(ws_cyl)
         x_cyl = (np.arctan2(-x_sincyl, -x_coscyl) + np.pi) * box[0] / tpi
         y_cyl = (np.arctan2(-y_sincyl, -y_coscyl) + np.pi) * box[1] / tpi
-        print('hunger')
-        in_radi = f_radial(hoxys.atoms.positions, x_cyl, y_cyl, coord_r, box)
+        in_radi = f_radial(hoxys.atoms.positions, x_cyl, y_cyl, coord_r, box, coord_h)
+        print(in_radi)
         epsilon = 0
         nsp = [0 for i in range(coord_n)]
         for s in range(coord_n):
@@ -159,7 +161,7 @@ def mem_chain(
             epsilon += psi_switch(nsp[s], coord_z)
         epsilon /= coord_n
         epsilons.append(epsilon)
-        print(idx, epsilon)
+        print("cry", idx, epsilon, nsp, coord_n, in_axis[s], psi_switch(nsp[s], coord_z))
 
     # plot
     if plot:
@@ -314,6 +316,12 @@ def mem_gyr(
     import matplotlib.pyplot as plt
     import numpy as np
     import MDAnalysis as mda
+    # import scienceplots
+    # plt.style.use('science')
+    # plt.axis('off')
+    # plt.box(True)
+    plt.tick_params(top='off', bottom='off', left='off', right='off',
+                    labelleft='off', labelbottom='off')
 
     # load top and xtc into MDA
     u = mda.Universe(top, xtc)
@@ -326,15 +334,39 @@ def mem_gyr(
     # idx_sort = " ".join(sorted([str(i) for i in idxes1 + idxes2]))
     idx_sort = " ".join([str(i) for i in idxes])
     idx_sort_e = " ".join([str(i) for i in idxes_e])
-    print(idx_sort)
+    print("bum ", " ".join([str(i) for i in idxes]))
+    print("dum ", " ".join([str(i) for i in idxes_e]))
     print(idx_sort_e)
     atoms = u.select_atoms("index " + idx_sort)
     atoms_e = u.select_atoms("index " + idx_sort_e)
 
-    for ts in u.trajectory:
+    ax = plt.gca()
+    ax.set_frame_on(True)
+    ax.set_yticks([])
+    ax.set_xticks([])
+    ax.set_yticklabels([])
+    ax.set_xticklabels([])
+    ax.set_aspect('equal', adjustable='box')
+
+    for ts in u.trajectory[-2:]:
+    # for ts in u.trajectory:
         box = ts.dimensions
         x_com = gyr_com(atoms, box, 0)
         y_com = gyr_com(atoms, box, 1)
+
+        Rcyc = 50
+        radii = np.linspace(0, 2*Rcyc, 100)
+        alphaa = []
+        for radi in radii:
+            pos = np.array([[radi, 0, 0]])
+            alphaa.append(f_radial(pos, 0., 0., Rcyc, box, h=.75)[0])
+
+        print("sweat", alphaa)
+        for alpha, radi in zip(alphaa, radii):
+            circle1 = plt.Circle((x_com, y_com), radi, color='r', fill=False, alpha=alpha)
+            print(radi, alpha, box[0])
+            ax.add_patch(circle1)
+
         for i in [-1, 0, 1]:
             for j in [-1, 0, 1]:
                 for idx in range(len(idxes)):
@@ -352,7 +384,9 @@ def mem_gyr(
         plt.plot([0]*2, [-box[0], box[0]*2], ls='--', color='k', alpha=0.5)
         plt.plot([box[0]]*2, [-box[0], box[0]*2], ls='--', color='k', alpha=0.5)
 
-        plt.scatter([x_com], [y_com], color='k', s=5000, facecolors="none")
+		# calculate circles
+        # plt.scatter([x_com], [y_com], color='k', s=5000, facecolors="none")
+
         plt.scatter([x_com], [y_com], color='k', marker='x')
 
         plt.plot([x_com-box[0]/2, x_com+box[0]/2], [y_com+box[1]/2]*2, color='r', ls='--', alpha=0.5)
@@ -362,8 +396,7 @@ def mem_gyr(
 
         plt.xlim([-box[0], 2*box[0]])
         plt.ylim([-box[1], 2*box[1]])
-        ax = plt.gca()
-        ax.set_aspect('equal', adjustable='box')
+        # plt.savefig("gyr.pdf", bbox_inches='tight')
         plt.show()
         exit()
 
@@ -439,3 +472,14 @@ def mem_gyr(
 #     return np.array(epsilons)
 # 
 # 
+
+def mem_closest(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    num_prot: Annotated[int, typer.Option("-num_prot", help="residue number per protein")] = 20,
+    radius: Annotated[int, typer.Option("-r", help="radius around center")] = 2,
+    plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
+):
+	"""Plot closest lipids to MEMCOM"""
+    u = mda.Universe(top, xtc)

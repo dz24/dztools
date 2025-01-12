@@ -38,6 +38,10 @@ def plot(
     # matplotlib.use('module://matplotlib-backend-wezterm')
     import numpy as np
 
+    if sci:
+        import scienceplots
+        plt.style.use("science")
+
     for idx, file in enumerate(i):
         data = np.loadtxt(file, comments=["@", "#"])
         alpha = 1 if not avg else 0.2
@@ -58,8 +62,6 @@ def plot(
     if leg:
         plt.legend(frameon=False)
     if sci:
-        import scienceplots
-        plt.style.use("science")
         plt.savefig("fig.pdf")
     else:
         plt.show()
@@ -82,6 +84,10 @@ def plot_ps(
     import os
     import numpy as np
 
+    if sci:
+        import scienceplots
+        plt.style.use("science")
+
     for idx, pn in enumerate(pns):
         print(pn)
         print('tiger', os.path.join(pn, "order.txt"))
@@ -94,10 +100,15 @@ def plot_ps(
             x= pn_o[:, 0][pn_t[:, 1] == traj]
             y= pn_o[:, 1][pn_t[:, 1] == traj]
             if len(x) > 1:
-                plt.plot(x, y, color=f"C{idx0}", alpha=alpha)
+                plt.plot(x*0.01, y, color=f"C{idx0}", alpha=alpha)
             else:
-                plt.plot([x[0]-1, x[0], x[0]+1], [pn_o[:, 1][int(x[0]-1)],y[0],pn_o[:, 1][int(x[0]+1)]], color=f"C{idx0}", alpha=alpha)
-        plt.show()
+                plt.plot(np.array([x[0]-1, x[0], x[0]+1])*0.01, [pn_o[:, 1][int(x[0]-1)],y[0],pn_o[:, 1][int(x[0]+1)]], color=f"C{idx0}", alpha=alpha)
+        plt.xlabel("Time [ns]")
+        plt.ylabel("Chain Order Parameter")
+        if sci:
+            plt.savefig("fig.pdf")
+        else:
+            plt.show()
 
         print(trajs)
         exit()
@@ -113,8 +124,6 @@ def plot_ps(
             plt.axhline(hline, color="k")
 
     if sci:
-        import scienceplots
-        plt.style.use("science")
         plt.savefig("fig.pdf")
     else:
         plt.show()
