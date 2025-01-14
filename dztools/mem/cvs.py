@@ -568,3 +568,106 @@ def mem_perm(
                 print(line)
                 write.write(line + "\n")
     plt.show()
+
+
+def mem_lippair(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    num: Annotated[int, typer.Option("-num", help="lipid number")] = 10,
+    plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
+):
+    """Plot closest lipids to MEMCOM"""
+    import MDAnalysis as mda
+    from MDAnalysis.analysis import distances
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from dztools.misc.mem_help import gyr_com2
+
+    u = mda.Universe(top, xtc)
+    popc = u.select_atoms("name P")
+    plen = len(popc)//2
+
+    x = []
+    y = []
+    for idx, ts in enumerate(u.trajectory):
+        x.append(idx)
+        box = ts.dimensions
+        pos = popc.atoms.positions
+        z_mem = popc.atoms.center_of_mass()[2]
+
+        z_dist = np.abs(pos[:, 2] - z_mem)
+        z_max = max(z_dist)
+        z_norm = z_dist/z_max
+        closest = np.argmin(z_norm)
+        z_op = min(z_norm)
+        x_min, y_min = pos[closest][0], pos[closest][1]
+
+        print('bom', sorted(z_norm))
+        if sum(z_norm<0.2) > 0:
+            print('cheeze', len(z_norm<0.2))
+            clips = pos[z_norm<0.2]
+            com_x = gyr_com2(clips, box, 0)
+            com_y = gyr_com2(clips, box, 1)
+
+            print('com', com_x, com_y)
+            print('pos', clips)
+
+            print('uh', (abs(clips[:, 2] - z_mem))/z_max)
+            print('bebe', len(z_norm<0.2))
+            print('hehe', clips)
+        else:   
+            com_x = pos[closest][0]
+            com_y = pos[closest][1]
+        com_d = distances.distance_array(np.array([x_min, y_min, 0]), np.array([com_x, com_y, 0]), box=box)[0]
+        print('box', box)
+        print('fish', z_mem, pos[closest], com_x, com_y)
+        print("op", z_op, com_d)
+        exit('nani')
+
+
+        # op = min(z_norm) + com
+        
+        # com: 
+        # if zero < 0.2: com is just min(z_norm).
+        # else: com = avg. of all lipids. 
+
+
+
+        # if zero, op = min(z_norm) + com
+        # else:
+
+        # may change argsort with argpartition in case bottlecap
+        close_idx = np.argsort(z_list)
+        closest = np.argmin(z_dist)
+
+        print(closest)
+        print('bl', min(z_dist), z_dist[closest])
+
+        # farthest_lipid_z = sorted(np.abs(popc.atoms.positions[:, 2] - z_mem))[-1]
+        # zlim_up = z_mem+farthest_lipid_z/20
+        # zlim_dw = z_mem-farthest_lipid_z/20
+        # hos = u.select_atoms(f"name OH* and prop z < {zlim_up} and prop z > {zlim_dw}")
+        # print('len', len(hos))
+        # x_com = gyr_com(hos.atoms, box, 0)
+        # y_com = gyr_com(hos.atoms, box, 1)
+
+        # print(box)
+        # print("ketchup", popc.atoms[closest].position)
+        # print("xycom", x_com, y_com)
+
+        exit()
+        # posz = sorted(np.abs(hos.atoms.positions[:, 2] - z_mem))
+
+        y.append(-posz[0]/farthest_lipid_z)
+
+    # plt.plot(x, y)
+
+    if out:
+        with open(out, 'w') as write:
+            # for idx, cv in zip(x, epsilons):
+            for idx in x:
+                line = f"{idx}\t{y[idx]}"
+                print(line)
+                write.write(line + "\n")
+    plt.show()
