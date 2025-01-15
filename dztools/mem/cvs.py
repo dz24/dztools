@@ -8,7 +8,7 @@ def calc_plateou(rmax, r_cap, plat=5, power=3):
         lindec = 1
     else:
         lindec = (1/(r_cap)**power)*(r_cap - (rmax-plat))**power
-    return
+    return lindec
 
 
 
@@ -836,6 +836,7 @@ def mem_rdf2(
                 hist_frame_norm[idx2] = hi/div
 
             r_dists_list.append(np.average(hist_frame_norm[:10]**2))
+
             # if r_dists_list[-1] == 0:
             # f_max = hist_frame_norm[hist_frame_norm!=0][0]
             # f_max_idx = np.where(hist_frame_norm==f_max)[0][0]
@@ -843,9 +844,16 @@ def mem_rdf2(
 
             sorted_hist_frame_norm = sorted(hist_frame_norm)
 
-            f_max = max(hist_frame_norm)
-            f_max_idx = np.where(hist_frame_norm==f_max)[0][0]
-            f_max_r = r_lin[f_max_idx]
+            f_max1 = sorted_hist_frame_norm[-1]
+            f_max_idx1 = np.where(hist_frame_norm==f_max1)[0][0]
+            f_max_r1 = r_lin[f_max_idx1]
+
+            f_max2 = sorted_hist_frame_norm[-2]
+            f_max_idx2 = np.where(hist_frame_norm==f_max2)[0][0]
+            f_max_r2 = r_lin[f_max_idx2]
+
+            # print('bea', f_max1, f_max_r1, f_max2, f_max_r2)
+            # exit()
             
             # argmax = np.argmax(hist_frame_norm)
             # maxdiff = (f_max/max(hist_frame_norm))**2
@@ -855,9 +863,11 @@ def mem_rdf2(
             # else:
             #     lindec = (1/(r_cap)**3)*(r_cap - (f_max_r-plateou))**3
             # maxh.append(lindec * maxdiff * f_max)
-            lindec_1 = calc_plateou(f_max1, r_cap)
-            lindec_2 = calc_plateou(f_max2, r_cap)
-            op = lindec1 * f_max1 + lindec2 * f_max2
+            lindec_1 = calc_plateou(f_max_r1, 15)
+            lindec_2 = calc_plateou(f_max_r2, 15)
+            op = lindec_1 * f_max1 + lindec_2 * f_max2
+            # print('tiger', lindec_1, f_max1, lindec_2, f_max2)
+            # exit()
             maxh.append(200 if op > 200 else op)
             # if op > 200:
                 # maxh.append(200)
@@ -865,9 +875,11 @@ def mem_rdf2(
             # if idx%100 == 0:
             # if 10 < maxh[-1] < 15:
             if False:
+            # if  maxh[-1] < 25:
                 print("tf")
                 print(hist_frame_norm)
-                print(idx, f_max_r, lindec, f_max, maxh[-1])
+                # print(idx, f_max1, lindec, f_max, maxh[-1])
+                print("ope", maxh[-1])
                 plt.plot(r_lin, hist_frame_norm)
                 plt.show()
                 # exit()
