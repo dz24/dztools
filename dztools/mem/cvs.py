@@ -3,6 +3,14 @@ from typing import Annotated
 import typer
 
 
+def calc_plateou(rmax, r_cap, plat=5, power=3):
+    if rmax < plat:
+        lindec = 1
+    else:
+        lindec = (1/(r_cap)**power)*(r_cap - (rmax-plat))**power
+    return
+
+
 
 def mem_helicity(
     top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
@@ -589,7 +597,14 @@ def mem_lippair(
     plen = len(popc)//2
 
     x = []
-    y = []
+    y1 = []
+    y2 = []
+    y3 = []
+    y4 = []
+    y5 = []
+    y6 = []
+    wavea = np.loadtxt("/home/daniel/Documents/md/ps/chain/128dmpc/gromacs_input/chaingromacs/1unbias/300b/wave.txt")
+    wave = np.zeros(len(popc))
     for idx, ts in enumerate(u.trajectory):
         x.append(idx)
         box = ts.dimensions
@@ -599,75 +614,291 @@ def mem_lippair(
         z_dist = np.abs(pos[:, 2] - z_mem)
         z_max = max(z_dist)
         z_norm = z_dist/z_max
+        y5.append(np.average(sorted(z_norm)[:10]))
+        wave += sorted(z_norm)
+
+        z_norm_avg = np.average(z_norm)
+        less_than_avg = z_norm[z_norm<z_norm_avg]
+        y4.append(np.var(z_norm_avg -less_than_avg))
+        
         closest = np.argmin(z_norm)
+        closest_p = distances.distance_array(pos[closest], pos, box=box)[0]
+        closest_num = sorted(closest_p)[20]
+        closest_numz = z_norm[closest_p < closest_num]
+        y6.append(sum(closest_numz))
+
         z_op = min(z_norm)
         x_min, y_min = pos[closest][0], pos[closest][1]
 
         print('bom', sorted(z_norm))
         if sum(z_norm<0.2) > 0:
+            y3.append(sum(z_norm<0.2))
             print('cheeze', len(z_norm<0.2))
             clips = pos[z_norm<0.2]
             com_x = gyr_com2(clips, box, 0)
             com_y = gyr_com2(clips, box, 1)
-
-            print('com', com_x, com_y)
-            print('pos', clips)
-
-            print('uh', (abs(clips[:, 2] - z_mem))/z_max)
-            print('bebe', len(z_norm<0.2))
-            print('hehe', clips)
         else:   
+            y3.append(0)
             com_x = pos[closest][0]
             com_y = pos[closest][1]
-        com_d = distances.distance_array(np.array([x_min, y_min, 0]), np.array([com_x, com_y, 0]), box=box)[0]
-        print('box', box)
-        print('fish', z_mem, pos[closest], com_x, com_y)
-        print("op", z_op, com_d)
-        exit('nani')
-
-
-        # op = min(z_norm) + com
-        
-        # com: 
-        # if zero < 0.2: com is just min(z_norm).
-        # else: com = avg. of all lipids. 
-
-
-
-        # if zero, op = min(z_norm) + com
-        # else:
-
-        # may change argsort with argpartition in case bottlecap
-        close_idx = np.argsort(z_list)
-        closest = np.argmin(z_dist)
-
-        print(closest)
-        print('bl', min(z_dist), z_dist[closest])
-
-        # farthest_lipid_z = sorted(np.abs(popc.atoms.positions[:, 2] - z_mem))[-1]
-        # zlim_up = z_mem+farthest_lipid_z/20
-        # zlim_dw = z_mem-farthest_lipid_z/20
-        # hos = u.select_atoms(f"name OH* and prop z < {zlim_up} and prop z > {zlim_dw}")
-        # print('len', len(hos))
-        # x_com = gyr_com(hos.atoms, box, 0)
-        # y_com = gyr_com(hos.atoms, box, 1)
-
-        # print(box)
-        # print("ketchup", popc.atoms[closest].position)
-        # print("xycom", x_com, y_com)
-
-        exit()
-        # posz = sorted(np.abs(hos.atoms.positions[:, 2] - z_mem))
-
-        y.append(-posz[0]/farthest_lipid_z)
-
-    # plt.plot(x, y)
+        com_d = distances.distance_array(np.array([x_min, y_min, 0]), np.array([com_x, com_y, 0]), box=box)[0][0]
+        y1.append(z_op)
+        y2.append(com_d)
+        print(len(y1), len(y2), len(y3), len(y4))
+        if len(set((len(y1), len(y2), len(y3), len(y4)))) > 1:
+            print("panda")
+            break
 
     if out:
         with open(out, 'w') as write:
             # for idx, cv in zip(x, epsilons):
             for idx in x:
-                line = f"{idx}\t{y[idx]}"
+                line = f"{idx}\t{y1[idx]}\t{y2[idx]}\t{y3[idx]}\t{y4[idx]}\t{y5[idx]}\t{y6[idx]}"
+                print(line)
+                write.write(line + "\n")
+        with open("wave.txt", 'w') as write:
+            # for idx, cv in zip(x, epsilons):
+            for idx, w in enumerate(wave/len(x)):
+                line = f"{idx}\t{w}"
+                print(line)
+                write.write(line + "\n")
+    plt.show()
+
+
+def mem_rdf(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    num: Annotated[int, typer.Option("-num", help="lipid number")] = 10,
+    plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
+):
+    """Plot closest lipids to MEMCOM"""
+    import MDAnalysis as mda
+    from MDAnalysis.analysis import distances
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from dztools.misc.mem_help import gyr_com2
+
+    u = mda.Universe(top, xtc)
+    popc = u.select_atoms("name P")
+    
+    x = []
+    # count from 0 - 10 
+    r_cap = 50
+    h_len = 120
+    r_lin = np.linspace(0, 50, h_len)
+    hist = np.zeros(h_len)
+    dens_avg = np.average([0.00041632855753776275, 0.0004151167125516087])
+    traj_len2 = len(u.trajectory)
+    # for idx, ts in enumerate(u.trajectory[traj_len2//2:]):
+    # for idx, ts in enumerate(u.trajectory[:traj_len2//2]):
+    for idx, ts in enumerate(u.trajectory):
+        x.append(idx)
+        box = ts.dimensions
+        pos = popc.atoms.positions
+        # dens.append(len(popc)/(box[0]*box[1]*box[2]))
+        z_mem = popc.atoms.center_of_mass()[2]
+
+        z_dist = np.abs(pos[:, 2] - z_mem)
+        z_max = max(z_dist)
+        z_norm = z_dist/z_max
+        closest = np.argmin(z_norm)
+        r_dists = distances.distance_array(popc.atoms.positions[np.argmax(z_norm)], popc.atoms.positions, box=box)[0]
+        for r_dist in sorted(r_dists)[1:]:
+            # floor
+            r_idx = int((r_dist/r_cap)*100)
+            if r_idx >= 100:
+                print('hehe', r_dist, r_idx, r_lin[-1])
+                continue
+            hist[r_idx] += 1
+
+    hist_norm = np.zeros(h_len)
+    dr = r_lin[1] - r_lin[0]
+    # dens_avg = np.average(dens)
+    # print("dens_avg", dens_avg)
+    traj_len = len(x)
+    for idx, hi in enumerate(hist):
+        ri0 = r_lin[idx]
+        ri1 = ri0 + dr
+        div = (4/3)*np.pi*(ri1**3 - ri0**3)*dens_avg
+        hist_norm[idx] = hi/(div*traj_len)
+
+    if out:
+        with open(out, 'w') as write:
+            # for idx, cv in zip(x, epsilons):
+            for idx in range(h_len):
+                line = f"{r_lin[idx]}\t{hist_norm[idx]}"
+                print(line)
+                write.write(line + "\n")
+    plt.show()
+
+def mem_rdf2(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    num: Annotated[int, typer.Option("-num", help="lipid number")] = 10,
+    plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
+    hoxy: Annotated[
+        str, typer.Option("-hoxy", help="xtc file")
+    ] = "OH2 O11 O12 O13 O14",
+    lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "resname POPC",
+    coord_n: Annotated[int, typer.Option("-coord_n")] = 26,
+    coord_d: Annotated[float, typer.Option("-coord_d")] = 1.0,
+    coord_r: Annotated[float, typer.Option("-coord_r")] = 8.0,
+    coord_z: Annotated[float, typer.Option("-coord_z")] = 0.75,
+    padding: Annotated[float, typer.Option("-padding")] = 0.5,
+    coord_h: Annotated[float, typer.Option("-coord_h")] = 0.25,
+):
+    """Plot closest lipids to MEMCOM"""
+    import MDAnalysis as mda
+    from MDAnalysis.analysis import distances
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from dztools.misc.mem_help import f_axial, f_radial, psi_switch
+
+    u = mda.Universe(top, xtc)
+    lipid = u.select_atoms("name P")
+    tpi = 2 * np.pi
+    
+    x = []
+    # count from 0 - 10 
+    r_cap = 50
+    h_len = 120
+    r_lin = np.linspace(0, r_cap, h_len)
+    dr = r_lin[1] - r_lin[0]
+    hist = np.zeros(h_len)
+    dens_avg = np.average([0.00041632855753776275, 0.0004151167125516087])
+    traj_len2 = len(u.trajectory)
+
+    # ax = plt.figure().add_subplot(projection="3d")
+    maxh = []
+    r_dists_list = []
+    with open(out, "w") as write:
+        write.write(f"{traj_len2*h_len}\n")
+        write.write("\n")
+        for idx, ts in enumerate(u.trajectory):
+            x.append(idx)
+            box = ts.dimensions
+            z_mem = lipid.atoms.center_of_mass()[-1]
+            z_s = z_mem + (np.arange(coord_n) + 1 / 2 - coord_n / 2) * coord_d
+            hoxys = u.select_atoms(f"name {hoxy} and prop z < {z_s[-1]+padding} and prop z > {z_s[0]-padding}")
+            atoms_x = hoxys.atoms.positions[:, 0]
+            atoms_y = hoxys.atoms.positions[:, 1]
+            box = ts.dimensions
+
+            ws_cyl = [0 for i in range(coord_n)]
+            in_axis = [0 for i in range(coord_n)]
+            in_radi = [0 for i in range(coord_n)]
+            x_sincyl, x_coscyl = 0, 0
+            y_sincyl, y_coscyl = 0, 0
+            ang_xs, ang_xc = np.sin(tpi * atoms_x / box[0]), np.cos(tpi * atoms_x / box[0])
+            ang_ys, ang_yc = np.sin(tpi * atoms_y / box[1]), np.cos(tpi * atoms_y / box[1])
+
+            for s in range(coord_n):
+                in_axis[s] = f_axial(hoxys.atoms.positions[:, 2], z_s[s], coord_d)
+                f_norm = np.sum(in_axis[s])
+                ws_cyl[s] = np.tanh(f_norm)
+                if f_norm == 0:
+                    continue
+                x_sincyl += np.sum(in_axis[s] * ang_xs) * ws_cyl[s] / f_norm
+                x_coscyl += np.sum(in_axis[s] * ang_xc) * ws_cyl[s] / f_norm
+                y_sincyl += np.sum(in_axis[s] * ang_ys) * ws_cyl[s] / f_norm
+                y_coscyl += np.sum(in_axis[s] * ang_yc) * ws_cyl[s] / f_norm
+
+            x_sincyl /= np.sum(ws_cyl)
+            x_coscyl /= np.sum(ws_cyl)
+            y_sincyl /= np.sum(ws_cyl)
+            y_coscyl /= np.sum(ws_cyl)
+            x_cyl = (np.arctan2(-x_sincyl, -x_coscyl) + np.pi) * box[0] / tpi
+            y_cyl = (np.arctan2(-y_sincyl, -y_coscyl) + np.pi) * box[1] / tpi
+
+
+            print("box", box)
+            print('xyc center', x_cyl, y_cyl, z_mem)
+
+            r_dists = distances.distance_array(np.array([x_cyl, y_cyl, z_mem]), lipid.atoms.positions, box=box)[0]
+            # r_dists_list.append(min(r_dists))
+            # r_dists_list.append(np.average(sorted(r_dists)[:2]))
+            hist_frame = np.zeros(h_len)
+            for r_dist in sorted(r_dists):
+                # floor
+                r_idx = int((r_dist/r_cap)*100)
+                if r_idx >= 100:
+                    print('hehe', r_dist, r_idx, r_lin[-1])
+                    continue
+                hist_frame[r_idx] += 1
+
+            hist_frame_norm = np.zeros(h_len) 
+            for idx2, hi in enumerate(hist_frame):
+                ri0 = r_lin[idx2]
+                ri1 = ri0 + dr
+                div = (4/3)*np.pi*(ri1**3 - ri0**3)*dens_avg
+                hist_frame_norm[idx2] = hi/div
+
+            r_dists_list.append(np.average(hist_frame_norm[:10]**2))
+            # if r_dists_list[-1] == 0:
+            # f_max = hist_frame_norm[hist_frame_norm!=0][0]
+            # f_max_idx = np.where(hist_frame_norm==f_max)[0][0]
+            # f_max_r = r_lin[f_max_idx]
+
+            sorted_hist_frame_norm = sorted(hist_frame_norm)
+
+            f_max = max(hist_frame_norm)
+            f_max_idx = np.where(hist_frame_norm==f_max)[0][0]
+            f_max_r = r_lin[f_max_idx]
+            
+            # argmax = np.argmax(hist_frame_norm)
+            # maxdiff = (f_max/max(hist_frame_norm))**2
+            # plateou = 5
+            # if f_max_r < plateou:
+            #     lindec = 1
+            # else:
+            #     lindec = (1/(r_cap)**3)*(r_cap - (f_max_r-plateou))**3
+            # maxh.append(lindec * maxdiff * f_max)
+            lindec_1 = calc_plateou(f_max1, r_cap)
+            lindec_2 = calc_plateou(f_max2, r_cap)
+            op = lindec1 * f_max1 + lindec2 * f_max2
+            maxh.append(200 if op > 200 else op)
+            # if op > 200:
+                # maxh.append(200)
+                
+            # if idx%100 == 0:
+            # if 10 < maxh[-1] < 15:
+            if False:
+                print("tf")
+                print(hist_frame_norm)
+                print(idx, f_max_r, lindec, f_max, maxh[-1])
+                plt.plot(r_lin, hist_frame_norm)
+                plt.show()
+                # exit()
+            # if idx%100 == 0:
+            # plt.plot(r_lin, hist_frame_norm, idx, alpha=0.5, color='k')
+            # for x00, y00 in zip(r_lin, hist_frame_norm):
+            #     if y00 == 0:
+            #         continue
+            #     write.write(f"Ar\t{x00}\t{y00}\t{idx}\n")
+
+            hist += hist_frame
+
+    # exit()
+    hist_norm = np.zeros(h_len)
+    # dens_avg = np.average(dens)
+    # print("dens_avg", dens_avg)
+    traj_len = len(x)
+    for idx, hi in enumerate(hist):
+        ri0 = r_lin[idx]
+        ri1 = ri0 + dr
+        div = (4/3)*np.pi*(ri1**3 - ri0**3)*dens_avg
+        hist_norm[idx] = hi/(div*traj_len)
+
+    plt.plot(r_lin, hist_norm, color='k')
+    if out:
+        with open(out, 'w') as write:
+            for idx, cv in zip(x, maxh):
+            # for x00, x11 in zip(r_lin, hist_norm):
+            # for idx in range(h_len):
+                line = f"{idx}\t{cv}\t{r_dists_list[idx]}"
+                # line = f"{x00}\t{x11}"
                 print(line)
                 write.write(line + "\n")
     plt.show()
