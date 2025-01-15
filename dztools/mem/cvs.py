@@ -748,6 +748,7 @@ def mem_rdf2(
     coord_z: Annotated[float, typer.Option("-coord_z")] = 0.75,
     padding: Annotated[float, typer.Option("-padding")] = 0.5,
     coord_h: Annotated[float, typer.Option("-coord_h")] = 0.25,
+    color: Annotated[str, typer.Option("-color")] = "C0",
 ):
     """Plot closest lipids to MEMCOM"""
     import MDAnalysis as mda
@@ -844,13 +845,37 @@ def mem_rdf2(
 
             sorted_hist_frame_norm = sorted(hist_frame_norm)
 
-            f_max1 = sorted_hist_frame_norm[-1]
-            f_max_idx1 = np.where(hist_frame_norm==f_max1)[0][0]
-            f_max_r1 = r_lin[f_max_idx1]
+            withinr = 10
+            pairs = []
+            for r000, h000 in zip(r_lin, hist_frame_norm):
+                if r000 > withinr:
+                    break
+                if h000 > 0:
+                    pairs.append([r000, h000])
+                    if len(pairs) == 2:
+                        twodist = pairs[1][0] - pairs[0][0]
+                        twodistf = 1 if twodist < 2 else -(1/4)*twodist+1.5
+            if len(pairs) < 2:
+                twodistf = 0.1
 
-            f_max2 = sorted_hist_frame_norm[-2]
-            f_max_idx2 = np.where(hist_frame_norm==f_max2)[0][0]
-            f_max_r2 = r_lin[f_max_idx2]
+            op = 0
+
+            # loner = 0.5 if len(pairs) == 1 else 1
+
+            for pidx, pair in enumerate(pairs):
+
+                lindec = calc_plateou(pair[0], r_cap=10, plat=2.5, power=1)
+                op1 = pair[1]*lindec
+                op += op1*twodistf
+                print('hhh', pair[0], pair[1], lindec, op1, op)
+
+            # f_max1 = sorted_hist_frame_norm[-1]
+            # f_max_idx1 = np.where(hist_frame_norm==f_max1)[0][0]
+            # f_max_r1 = r_lin[f_max_idx1]
+
+            # f_max2 = sorted_hist_frame_norm[-2]
+            # f_max_idx2 = np.where(hist_frame_norm==f_max2)[0][0]
+            # f_max_r2 = r_lin[f_max_idx2]
 
             # print('bea', f_max1, f_max_r1, f_max2, f_max_r2)
             # exit()
@@ -863,9 +888,10 @@ def mem_rdf2(
             # else:
             #     lindec = (1/(r_cap)**3)*(r_cap - (f_max_r-plateou))**3
             # maxh.append(lindec * maxdiff * f_max)
-            lindec_1 = calc_plateou(f_max_r1, 15)
-            lindec_2 = calc_plateou(f_max_r2, 15)
-            op = lindec_1 * f_max1 + lindec_2 * f_max2
+
+            # lindec_1 = calc_plateou(f_max_r1, 15)
+            # lindec_2 = calc_plateou(f_max_r2, 15)
+            # op = lindec_1 * f_max1 + lindec_2 * f_max2
             # print('tiger', lindec_1, f_max1, lindec_2, f_max2)
             # exit()
             maxh.append(200 if op > 200 else op)
@@ -874,13 +900,14 @@ def mem_rdf2(
                 
             # if idx%100 == 0:
             # if 10 < maxh[-1] < 15:
-            if False:
-            # if  maxh[-1] < 25:
+            # if False:
+            if  55 > maxh[-1] > 20:
                 print("tf")
                 print(hist_frame_norm)
                 # print(idx, f_max1, lindec, f_max, maxh[-1])
                 print("ope", maxh[-1])
-                plt.plot(r_lin, hist_frame_norm)
+                print("twodist", twodist, twodistf)
+                plt.plot(r_lin, hist_frame_norm, color=color)
                 plt.show()
                 # exit()
             # if idx%100 == 0:
