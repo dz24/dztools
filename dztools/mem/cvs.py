@@ -6,6 +6,8 @@ import typer
 def calc_plateou(rmax, r_cap, plat=5, power=3):
     if rmax < plat:
         lindec = 1
+    elif rmax > r_cap:
+        lindec = 0.0
     else:
         lindec = (1/(r_cap)**power)*(r_cap - (rmax-plat))**power
     return lindec
@@ -596,19 +598,21 @@ def mem_lippair(
     popc = u.select_atoms("name P")
     plen = len(popc)//2
 
-    x = []
+    x  = []
     y1 = []
     y2 = []
     y3 = []
     y4 = []
     y5 = []
     y6 = []
+    y7 = []
     wavea = np.loadtxt("/home/daniel/Documents/md/ps/chain/128dmpc/gromacs_input/chaingromacs/1unbias/300b/wave.txt")
     wave = np.zeros(len(popc))
     for idx, ts in enumerate(u.trajectory):
         x.append(idx)
         box = ts.dimensions
         pos = popc.atoms.positions
+        y7.append(len(pos)/(box[0]*box[1]))
         z_mem = popc.atoms.center_of_mass()[2]
 
         z_dist = np.abs(pos[:, 2] - z_mem)
@@ -653,7 +657,7 @@ def mem_lippair(
         with open(out, 'w') as write:
             # for idx, cv in zip(x, epsilons):
             for idx in x:
-                line = f"{idx}\t{y1[idx]}\t{y2[idx]}\t{y3[idx]}\t{y4[idx]}\t{y5[idx]}\t{y6[idx]}"
+                line = f"{idx}\t{y1[idx]}\t{y2[idx]}\t{y3[idx]}\t{y4[idx]}\t{y5[idx]}\t{y6[idx]}\t{y7[idx]}"
                 print(line)
                 write.write(line + "\n")
         with open("wave.txt", 'w') as write:
@@ -758,11 +762,13 @@ def mem_rdf2(
     from dztools.misc.mem_help import f_axial, f_radial, psi_switch
 
     u = mda.Universe(top, xtc)
+    print(u.select_atoms("resid 1"))
+    print(u.select_atoms("resid 2"))
     lipid = u.select_atoms("name P")
     tpi = 2 * np.pi
-    
+
     x = []
-    # count from 0 - 10 
+    # count from 0 - 10
     r_cap = 50
     h_len = 120
     r_lin = np.linspace(0, r_cap, h_len)
@@ -774,150 +780,186 @@ def mem_rdf2(
     # ax = plt.figure().add_subplot(projection="3d")
     maxh = []
     r_dists_list = []
-    with open(out, "w") as write:
-        write.write(f"{traj_len2*h_len}\n")
-        write.write("\n")
-        for idx, ts in enumerate(u.trajectory):
-            x.append(idx)
-            box = ts.dimensions
-            z_mem = lipid.atoms.center_of_mass()[-1]
-            z_s = z_mem + (np.arange(coord_n) + 1 / 2 - coord_n / 2) * coord_d
-            hoxys = u.select_atoms(f"name {hoxy} and prop z < {z_s[-1]+padding} and prop z > {z_s[0]-padding}")
-            atoms_x = hoxys.atoms.positions[:, 0]
-            atoms_y = hoxys.atoms.positions[:, 1]
-            box = ts.dimensions
+    # with open(out, "w") as write:
+        # write.write(f"{traj_len2*h_len}\n")
+        # write.write("\n")
+    blasts = []
+    blasts2 = []
+    hist_sorted_acc = np.zeros(h_len)
+    for idx, ts in enumerate(u.trajectory):
+        x.append(idx)
+        box = ts.dimensions
+        z_mem = lipid.atoms.center_of_mass()[-1]
+        z_s = z_mem + (np.arange(coord_n) + 1 / 2 - coord_n / 2) * coord_d
+        hoxys = u.select_atoms(f"name {hoxy} and prop z < {z_s[-1]+padding} and prop z > {z_s[0]-padding}")
+        atoms_x = hoxys.atoms.positions[:, 0]
+        atoms_y = hoxys.atoms.positions[:, 1]
+        box = ts.dimensions
 
-            ws_cyl = [0 for i in range(coord_n)]
-            in_axis = [0 for i in range(coord_n)]
-            in_radi = [0 for i in range(coord_n)]
-            x_sincyl, x_coscyl = 0, 0
-            y_sincyl, y_coscyl = 0, 0
-            ang_xs, ang_xc = np.sin(tpi * atoms_x / box[0]), np.cos(tpi * atoms_x / box[0])
-            ang_ys, ang_yc = np.sin(tpi * atoms_y / box[1]), np.cos(tpi * atoms_y / box[1])
+        ws_cyl = [0 for i in range(coord_n)]
+        in_axis = [0 for i in range(coord_n)]
+        in_radi = [0 for i in range(coord_n)]
+        x_sincyl, x_coscyl = 0, 0
+        y_sincyl, y_coscyl = 0, 0
+        ang_xs, ang_xc = np.sin(tpi * atoms_x / box[0]), np.cos(tpi * atoms_x / box[0])
+        ang_ys, ang_yc = np.sin(tpi * atoms_y / box[1]), np.cos(tpi * atoms_y / box[1])
 
-            for s in range(coord_n):
-                in_axis[s] = f_axial(hoxys.atoms.positions[:, 2], z_s[s], coord_d)
-                f_norm = np.sum(in_axis[s])
-                ws_cyl[s] = np.tanh(f_norm)
-                if f_norm == 0:
-                    continue
-                x_sincyl += np.sum(in_axis[s] * ang_xs) * ws_cyl[s] / f_norm
-                x_coscyl += np.sum(in_axis[s] * ang_xc) * ws_cyl[s] / f_norm
-                y_sincyl += np.sum(in_axis[s] * ang_ys) * ws_cyl[s] / f_norm
-                y_coscyl += np.sum(in_axis[s] * ang_yc) * ws_cyl[s] / f_norm
+        for s in range(coord_n):
+            in_axis[s] = f_axial(hoxys.atoms.positions[:, 2], z_s[s], coord_d)
+            f_norm = np.sum(in_axis[s])
+            ws_cyl[s] = np.tanh(f_norm)
+            if f_norm == 0:
+                continue
+            x_sincyl += np.sum(in_axis[s] * ang_xs) * ws_cyl[s] / f_norm
+            x_coscyl += np.sum(in_axis[s] * ang_xc) * ws_cyl[s] / f_norm
+            y_sincyl += np.sum(in_axis[s] * ang_ys) * ws_cyl[s] / f_norm
+            y_coscyl += np.sum(in_axis[s] * ang_yc) * ws_cyl[s] / f_norm
 
-            x_sincyl /= np.sum(ws_cyl)
-            x_coscyl /= np.sum(ws_cyl)
-            y_sincyl /= np.sum(ws_cyl)
-            y_coscyl /= np.sum(ws_cyl)
-            x_cyl = (np.arctan2(-x_sincyl, -x_coscyl) + np.pi) * box[0] / tpi
-            y_cyl = (np.arctan2(-y_sincyl, -y_coscyl) + np.pi) * box[1] / tpi
+        x_sincyl /= np.sum(ws_cyl)
+        x_coscyl /= np.sum(ws_cyl)
+        y_sincyl /= np.sum(ws_cyl)
+        y_coscyl /= np.sum(ws_cyl)
+        x_cyl = (np.arctan2(-x_sincyl, -x_coscyl) + np.pi) * box[0] / tpi
+        y_cyl = (np.arctan2(-y_sincyl, -y_coscyl) + np.pi) * box[1] / tpi
 
 
-            print("box", box)
-            print('xyc center', x_cyl, y_cyl, z_mem)
+        print("box", box)
+        print('xyc center', x_cyl, y_cyl, z_mem)
 
-            r_dists = distances.distance_array(np.array([x_cyl, y_cyl, z_mem]), lipid.atoms.positions, box=box)[0]
-            # r_dists_list.append(min(r_dists))
-            # r_dists_list.append(np.average(sorted(r_dists)[:2]))
-            hist_frame = np.zeros(h_len)
-            for r_dist in sorted(r_dists):
-                # floor
-                r_idx = int((r_dist/r_cap)*100)
-                if r_idx >= 100:
-                    print('hehe', r_dist, r_idx, r_lin[-1])
-                    continue
-                hist_frame[r_idx] += 1
+        r_dists = distances.distance_array(np.array([x_cyl, y_cyl, z_mem]), lipid.atoms.positions, box=box)[0]
+        # r_dists_list.append(min(r_dists))
+        # r_dists_list.append(np.average(sorted(r_dists)[:2]))
+        hist_frame = np.zeros(h_len)
+        for r_dist in sorted(r_dists):
+            # floor
+            r_idx = int((r_dist/r_cap)*100)
+            if r_idx >= 100:
+                print('hehe', r_dist, r_idx, r_lin[-1])
+                continue
+            hist_frame[r_idx] += 1
 
-            hist_frame_norm = np.zeros(h_len) 
-            for idx2, hi in enumerate(hist_frame):
-                ri0 = r_lin[idx2]
-                ri1 = ri0 + dr
-                div = (4/3)*np.pi*(ri1**3 - ri0**3)*dens_avg
-                hist_frame_norm[idx2] = hi/div
+        hist_frame_norm = np.zeros(h_len)
+        for idx2, hi in enumerate(hist_frame):
+            ri0 = r_lin[idx2]
+            ri1 = ri0 + dr
+            div = (4/3)*np.pi*(ri1**3 - ri0**3)*dens_avg
+            hist_frame_norm[idx2] = hi/div
 
-            r_dists_list.append(np.average(hist_frame_norm[:10]**2))
+        r_dists_list.append(np.average(hist_frame_norm[:10]**2))
 
-            # if r_dists_list[-1] == 0:
-            # f_max = hist_frame_norm[hist_frame_norm!=0][0]
-            # f_max_idx = np.where(hist_frame_norm==f_max)[0][0]
-            # f_max_r = r_lin[f_max_idx]
+        # if r_dists_list[-1] == 0:
+        # f_max = hist_frame_norm[hist_frame_norm!=0][0]
+        # f_max_idx = np.where(hist_frame_norm==f_max)[0][0]
+        # f_max_r = r_lin[f_max_idx]
 
-            sorted_hist_frame_norm = sorted(hist_frame_norm)
+        sorted_hist_frame_norm = sorted(hist_frame_norm)
+        hist_sorted_acc += sorted_hist_frame_norm[::-1]
 
-            withinr = 10
-            pairs = []
-            for r000, h000 in zip(r_lin, hist_frame_norm):
-                if r000 > withinr:
-                    break
-                if h000 > 0:
-                    pairs.append([r000, h000])
-                    if len(pairs) == 2:
-                        twodist = pairs[1][0] - pairs[0][0]
-                        twodistf = 1 if twodist < 2 else -(1/4)*twodist+1.5
-            if len(pairs) < 2:
-                twodistf = 0.1
+        withinr = 10
+        pairs = []
+        for r000, h000 in zip(r_lin, hist_frame_norm):
+            if r000 > withinr:
+                break
+            if h000 > 0:
+                pairs.append([r000, h000])
+        hinsort = sorted([i[1] for i in pairs])
+        # blasts.append(0 if not hinsort else max(hinsort)/min(hinsort))
+        blasts.append(sum(sorted_hist_frame_norm[::-1][:5]))
+        blasts2.append(sum(sorted_hist_frame_norm))
+                # if len(pairs) == 2:
+                #     twodist = pairs[1][0] - pairs[0][0]
+                #     twodistf = 1 if twodist < 2 else -(1/4)*twodist+1.5
+        # if len(pairs) < 2:
+        #     twodistf = 0.1
 
-            op = 0
+        op = 0
 
-            # loner = 0.5 if len(pairs) == 1 else 1
+        # loner = 0.5 if len(pairs) == 1 else 1
 
-            for pidx, pair in enumerate(pairs):
+        for pidx, pair in enumerate(pairs):
 
-                lindec = calc_plateou(pair[0], r_cap=10, plat=2.5, power=1)
-                op1 = pair[1]*lindec
-                op += op1*twodistf
-                print('hhh', pair[0], pair[1], lindec, op1, op)
+            lindec = calc_plateou(pair[0], r_cap=10, plat=2.5, power=1)
+            if pair[0] != pairs[-1][0]:
+                twodist = pairs[pidx+1][0] - pair[0]
+                if pidx == 0:
+                    twodist = min([twodist, pair[0]])
+                    print("sel", [twodist, pair[0]], twodist)
+                lindec2 = calc_plateou(twodist, r_cap=5, plat=2.0, power=3)
+                # print("blast", max(hinsort)/min(hinsort))
+            else:
+                twodist = None
+                lindec2 = 1
 
-            # f_max1 = sorted_hist_frame_norm[-1]
-            # f_max_idx1 = np.where(hist_frame_norm==f_max1)[0][0]
-            # f_max_r1 = r_lin[f_max_idx1]
+            op1 = pair[1]*lindec*lindec2
+            op += op1
+            print('hhh', pair[0], pair[1], lindec, lindec2, twodist, op1, op)
+            # print('aya', twodist, lindec2)
 
-            # f_max2 = sorted_hist_frame_norm[-2]
-            # f_max_idx2 = np.where(hist_frame_norm==f_max2)[0][0]
-            # f_max_r2 = r_lin[f_max_idx2]
+        # f_max1 = sorted_hist_frame_norm[-1]
+        # f_max_idx1 = np.where(hist_frame_norm==f_max1)[0][0]
+        # f_max_r1 = r_lin[f_max_idx1]
 
-            # print('bea', f_max1, f_max_r1, f_max2, f_max_r2)
+        # f_max2 = sorted_hist_frame_norm[-2]
+        # f_max_idx2 = np.where(hist_frame_norm==f_max2)[0][0]
+        # f_max_r2 = r_lin[f_max_idx2]
+
+        # print('bea', f_max1, f_max_r1, f_max2, f_max_r2)
+        # exit()
+
+        # argmax = np.argmax(hist_frame_norm)
+        # maxdiff = (f_max/max(hist_frame_norm))**2
+        # plateou = 5
+        # if f_max_r < plateou:
+        #     lindec = 1
+        # else:
+        #     lindec = (1/(r_cap)**3)*(r_cap - (f_max_r-plateou))**3
+        # maxh.append(lindec * maxdiff * f_max)
+
+        # lindec_1 = calc_plateou(f_max_r1, 15)
+        # lindec_2 = calc_plateou(f_max_r2, 15)
+        # op = lindec_1 * f_max1 + lindec_2 * f_max2
+        # print('tiger', lindec_1, f_max1, lindec_2, f_max2)
+        # exit()
+        maxh.append(200 if op > 200 else op)
+        # if op > 200:
+            # maxh.append(200)
+
+        # if idx%100 == 0:
+        # if 10 < maxh[-1] < 15:
+        # if  35 > maxh[-1] > 20:
+        # if  30 > maxh[-1] > 22:
+        # if  125 > blasts[-1] > 115:
+        # if  180 > blasts2[-1] > 160:
+        # if True:
+        if False:
+            print("tf")
+            # print(hist_frame_norm)
+            # print(idx, f_max1, lindec, f_max, maxh[-1])
+            print("ope", maxh[-1])
+            # print("twodist", twodist, twodistf)
+            # plt.plot(r_lin, np.log(hist_frame_norm+0.5))
+
+            # plt.plot(r_lin, sorted(hist_frame_norm)[::-1], color=color)
+            # plt.scatter(r_lin, sorted(hist_frame_norm)[::-1], color=color)
+
+            # temp00 = np.array(sorted(hist_frame_norm)[::-1])[:20]
+            # plt.plot(r_lin[:19], temp00[:-1]/temp00[1:], color=color, ls='--')
+            # plt.scatter(r_lin[:19], temp00[:-1]/temp00[1:], color=color, marker='x')
+
+            # lip_com calc
+            p
+
+
+            plt.show()
             # exit()
-            
-            # argmax = np.argmax(hist_frame_norm)
-            # maxdiff = (f_max/max(hist_frame_norm))**2
-            # plateou = 5
-            # if f_max_r < plateou:
-            #     lindec = 1
-            # else:
-            #     lindec = (1/(r_cap)**3)*(r_cap - (f_max_r-plateou))**3
-            # maxh.append(lindec * maxdiff * f_max)
+        # if idx%100 == 0:
+        # plt.plot(r_lin, hist_frame_norm, idx, alpha=0.5, color='k')
+        # for x00, y00 in zip(r_lin, hist_frame_norm):
+        #     if y00 == 0:
+        #         continue
+        #     write.write(f"Ar\t{x00}\t{y00}\t{idx}\n")
 
-            # lindec_1 = calc_plateou(f_max_r1, 15)
-            # lindec_2 = calc_plateou(f_max_r2, 15)
-            # op = lindec_1 * f_max1 + lindec_2 * f_max2
-            # print('tiger', lindec_1, f_max1, lindec_2, f_max2)
-            # exit()
-            maxh.append(200 if op > 200 else op)
-            # if op > 200:
-                # maxh.append(200)
-                
-            # if idx%100 == 0:
-            # if 10 < maxh[-1] < 15:
-            # if False:
-            if  55 > maxh[-1] > 20:
-                print("tf")
-                print(hist_frame_norm)
-                # print(idx, f_max1, lindec, f_max, maxh[-1])
-                print("ope", maxh[-1])
-                print("twodist", twodist, twodistf)
-                plt.plot(r_lin, hist_frame_norm, color=color)
-                plt.show()
-                # exit()
-            # if idx%100 == 0:
-            # plt.plot(r_lin, hist_frame_norm, idx, alpha=0.5, color='k')
-            # for x00, y00 in zip(r_lin, hist_frame_norm):
-            #     if y00 == 0:
-            #         continue
-            #     write.write(f"Ar\t{x00}\t{y00}\t{idx}\n")
-
-            hist += hist_frame
+        hist += hist_frame
 
     # exit()
     hist_norm = np.zeros(h_len)
@@ -936,8 +978,11 @@ def mem_rdf2(
             for idx, cv in zip(x, maxh):
             # for x00, x11 in zip(r_lin, hist_norm):
             # for idx in range(h_len):
-                line = f"{idx}\t{cv}\t{r_dists_list[idx]}"
+                line = f"{idx}\t{cv}\t{r_dists_list[idx]}\t{blasts[idx]}\t{blasts2[idx]}"
                 # line = f"{x00}\t{x11}"
                 print(line)
                 write.write(line + "\n")
     plt.show()
+    print("gorilla")
+    for x, y in zip(r_lin, hist_sorted_acc/traj_len):
+        print(x, y)
