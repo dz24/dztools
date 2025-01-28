@@ -90,3 +90,14 @@ def gyr_com(atoms, box, dim):
 
     return com
 
+def gyr_com2(pos, box, dim):
+    import numpy as np
+
+    angle = [2*np.pi*i[dim]/box[dim] for i in pos]
+    cos, sin =  np.cos(angle), np.sin(angle)
+    avg_cos, avg_sin = np.average(cos), np.average(sin)
+    theta = np.arctan2(-avg_sin, -avg_cos) + np.pi
+    com = box[dim]*theta/(2*np.pi)
+
+    return com
+
