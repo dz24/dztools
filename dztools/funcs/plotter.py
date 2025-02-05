@@ -38,6 +38,8 @@ def plot(
     # matplotlib.use('module://matplotlib-backend-wezterm')
     import numpy as np
 
+    print("ww")
+
     if sci:
         import scienceplots
         plt.style.use("science")

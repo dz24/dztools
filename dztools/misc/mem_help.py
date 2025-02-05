@@ -164,4 +164,5 @@ def calc_chain(
         nsp[s] = np.sum(in_axis[s] * in_radi)
         epsilon += psi_switch(nsp[s], coord_z)
     epsilon /= coord_n
+
     return epsilon
