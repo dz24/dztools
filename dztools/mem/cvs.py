@@ -1276,43 +1276,45 @@ def mem_lin(
     lipid = u.select_atoms("name P")
 
     x = []
-    up_max, up_min, dw_max, dw_min = [], [], [], []
-    smal1, smal2 = [], []
+    # up_max, up_min, dw_max, dw_min = [], [], [], []
+    zmax, zmin = [], []
+    # smal1, smal2 = [], []
+    z_mems, z_0, z_1 = [], [], []
+    z_2, z_3 = [], []
+    z_max, z_min = [], []
     for idx, ts in enumerate(u.trajectory):
         x.append(idx)
         box = ts.dimensions
         z_mem = lipid.atoms.center_of_mass()[-1]
-        l_up = lipid.select_atoms(f"prop z > {z_mem}")
-        l_dw = lipid.select_atoms(f"prop z < {z_mem}")
+        z_mems.append(z_mem)
 
-        z_dist = np.abs(lipid.atoms.positions[:, 2] - z_mem)
-        z_norm = sorted(z_dist)/max(z_dist)
-        smal1.append(z_norm[0])
-        smal2.append(z_norm[1])
+        # l_up = lipid.select_atoms(f"prop z > {z_mem}")
+        # l_dw = lipid.select_atoms(f"prop z < {z_mem}")
 
-        pos_up = l_up.atoms.positions
-        pos_up[:, 0] = 0
-        pos_up[:, 1] = 0
-        pos_dw = l_dw.atoms.positions
-        pos_dw[:, 0] = 0
-        pos_dw[:, 1] = 0
-        
-        up_dists = distances.distance_array(np.array([0, 0, z_mem]), pos_up, box=box)[0]
-        up_max.append(max(up_dists))
-        up_min.append(min(up_dists))
-        dw_dists = distances.distance_array(np.array([0, 0, z_mem]), pos_dw, box=box)[0]
-        dw_max.append(-max(dw_dists))
-        dw_min.append(-min(dw_dists))
+        pos = lipid.atoms.positions[:, 2]
+        z_max.append(max(pos))
+        z_min.append(min(pos))
+        z_dist = np.abs(pos - z_mem)
+        z_idxes = np.argsort(z_dist)
+        z_idxes2 = np.argsort(pos)
 
-    plt.plot(x, up_max, ls="--", color="C0")
-    plt.plot(x, up_min, color="C0")
-    plt.plot(x, dw_max, ls="--", color="C1")
-    plt.plot(x, dw_min, color="C1")
-    plt.show()
+        z_0.append(pos[z_idxes[0]])
+        z_1.append(pos[z_idxes[1]])
+
+        z_hmax = z_idxes2[len(z_idxes2)//2]
+        z_hmin = z_idxes2[len(z_idxes2)//2-1]
+        z_2.append(pos[z_hmax])
+        z_3.append(pos[z_hmin])
+
+        # dist = distances.distance_array(pos[z_hmin], pos[z_hmax], box=box)[0][0]
+        # dz_list.append(np.abs(pos[z_hmin][2] - pos[z_hmax][2]))
+
     if out:
         with open(out, 'w') as write:
             for idx in x:
-                line = f"{idx}\t{up_max[idx]}\t{up_min[idx]}\t{dw_max[idx]}\t{dw_min[idx]}\t{smal1[idx]}\t{smal2[idx]}"
+                # line = f"{idx}\t{up_max[idx]}\t{up_min[idx]}\t{dw_max[idx]}\t{dw_min[idx]}\t{smal1[idx]}\t{smal2[idx]}"
+                line = f"{idx}\t{z_mems[idx]}\t{z_0[idx]}\t{z_1[idx]}"
+                line += f"\t{z_2[idx]}\t{z_3[idx]}\t{z_max[idx]}\t{z_min[idx]}"
                 # line = f"{x00}\t{x11}"
                 print(line)
                 write.write(line + "\n")
@@ -1401,25 +1403,17 @@ def mem_flat(
             z_hmin = z_idxes[len(z_idxes)//2-(1+ii)]
             dist = distances.distance_array(pos[z_hmin], pos[z_hmax], box=box)[0][0]
             dz_list.append(np.abs(pos[z_hmin][2] - pos[z_hmax][2]))
+
         if False:
-            print("fruit", dist, dz_list)
             ax = plt.figure().add_subplot(projection='3d')
             lower = z_idxes[:len(z_idxes)//2]
             highe = z_idxes[len(z_idxes)//2:]
-            print('bor', len(lower), len(highe))
-
-            # ax.scatter(pos[:len(z_idxes)//2, 0], pos[:len(z_idxes)//2, 1], pos[:len(z_idxes)//2, 2], color='C0')
-            # ax.scatter(pos[len(z_idxes)//2:, 0], pos[len(z_idxes)//2:, 1], pos[len(z_idxes)//2:, 2], color='C1')
 
             ax.scatter(pos[lower, 0], pos[lower, 1], pos[lower, 2], color='C0')
             ax.scatter(pos[highe, 0], pos[highe, 1], pos[highe, 2], color='C1')
 
             print("no cap", len(pos[len(z_idxes)//2:, 2]), len(pos[:len(z_idxes)//2, 0]))
-            # ax.scatter(pos[z_hmax, 0], pos[z_hmax, 1], pos[z_hmax, 2], color='C0')
-            # ax.scatter(pos[z_hmin, 0], pos[z_hmin, 1], pos[z_hmin, 2], color='C1')
             plt.show()
-        # print('op', dist)
-        # exit()
         dist1.append(dist)
         dist2.append(dz_list[0])
         dist3.append(dz_list[1])
@@ -1427,52 +1421,112 @@ def mem_flat(
         dist5.append(dz_list[3])
         dist6.append(dz_list[4])
 
-        # z_dist = np.abs(lipid.atoms.positions[:, 2] - z_mem)
-        # z_norm = sorted(z_dist)
-
-        # for lip in lipids:
-        #     # mda.transformations.unwrap(lip)
-        #     # mda.transformations
-        #     pos = lip.atoms.positions
-        #     # zlist.append(max(pos)- min(pos))
-        #     # dx = max(pos[:, 0]) - min(pos[:, 0])
-        #     # dy = max(pos[:, 1]) - min(pos[:, 1])
-        #     dz = max(pos[:, 1]) - min(pos[:, 1])
-        #     d_zcom = np.abs(lip.center_of_mass()[-1] - zcom1[-1])
-
-        #     # zlist.append(max(pos) - min(pos))
-        #     # zlist.append(dz + d_zcom - dx -dy)
-        #     zlist.append(dz*d_zcom)
-        # k = 12
-        # idxes = np.argpartition(zlist, k)[:k]
-        # apos = lipid.atoms.positions
-        # plt.scatter(apos[:, 0], apos[:, 1], alpha=np.array(zlist)/max(zlist))
-        # plt.plot(arange, z_norm, color=color)
-        # plt.show()
-        # for i in idxes:
-        #     apos = lipid.atoms[idxes].positions
-        #     plt.scatter(apos[:, 0], apos[:, 1])
-        #     plt.show()
-
-
-        # zlist = sorted(zlist)
-        # dist1.append(zlist[0])
-        # dist2.append(zlist[1])
-        # dist3.append(zlist[2])
-        # dist4.append(zlist[3])
-        # dist5.append(zlist[4])
-        # zcom2.append(allpid.atoms.center_of_mass()[-1])
-        # if idx%10==0:
-        #     plt.plot(arange, sorted(zlist), color=color)
-        #     plt.show()
-
     if out:
         with open(out, 'w') as write:
             for idx in x:
                 line = f"{idx}\t{dist1[idx]}\t{dist2[idx]}\t{dist3[idx]}\t{dist4[idx]}\t{dist5[idx]}\t{dist6[idx]}\t{zcom1[idx]}"
-                # line = f"{idx}\t{dist1[idx]}\t{dist2[idx]}\t{dist3[idx]}\t{dist4[idx]}\t{dist5[idx]}"
-                # line += f"\t{zcom1[idx]}\t{zcom2[idx]}"
-                # line = f"{x00}\t{x11}"
-                print(line)
 
                 write.write(line + "\n")
+
+
+def mem_ff3(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    num: Annotated[int, typer.Option("-num", help="lipid number")] = 10,
+    plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
+    color: Annotated[str, typer.Option("-color")] = "C0",
+):
+    """Plot how flat lipids are"""
+    import MDAnalysis as mda
+    from MDAnalysis.analysis import distances
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from dztools.misc.mem_help import f_axial, f_radial, psi_switch
+
+    u = mda.Universe(top, xtc)
+    lipid = u.select_atoms("name P")
+    arange = np.arange(1,1+len(lipid))
+    lipids = [u.select_atoms(f"resid {i}") for i in arange]
+    allpid = u.select_atoms(f"resid {arange[0]}-{arange[-1]}")
+
+    x = []
+    ops1 = []
+    ops2 = []
+    ops3 = []
+    ops4 = []
+    for idx, ts in enumerate(u.trajectory):
+        x.append(idx)
+        box = ts.dimensions
+        # zlist = []
+        # zcom1.append(lipid.atoms.center_of_mass()[-1])
+        # z_mem = lipid.atoms.center_of_mass()[-1]
+
+        pos = lipid.atoms.positions
+        z_idxes = np.argsort(pos[:, 2])
+        lower = pos[:, 2][z_idxes[:len(z_idxes)//2]]
+        upper = pos[:, 2][z_idxes[len(z_idxes)//2:]]
+        up_avg = np.average(upper)
+        dw_avg = np.average(lower)
+        mlen = up_avg - dw_avg
+        dup_avg = abs(min(upper)-up_avg)/mlen
+        ddw_avg = abs(max(lower)-dw_avg)/mlen
+        op1 = max([dup_avg, ddw_avg])
+        op2 = sum([dup_avg, ddw_avg])
+        op3 = abs(dup_avg - ddw_avg)
+
+        ops1.append(op1)
+        ops2.append(op2)
+        ops3.append(op3 + op1)
+        ops4.append(op3 + op2)
+
+    if out:
+        with open(out, 'w') as write:
+            for idx in x:
+                line = f"{idx}\t{ops1[idx]}\t{ops2[idx]}\t{ops3[idx]}\t{ops4[idx]}"
+
+                write.write(line + "\n")
+
+def mem_perm2(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
+):
+    """Plot closest lipids to MEMCOM"""
+    import MDAnalysis as mda
+    from MDAnalysis.analysis import distances
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    u = mda.Universe(top, xtc)
+    popc = u.select_atoms("name P")
+    pot = u.select_atoms("name POT")
+    plen = len(popc)//2
+
+    x = []
+    y = []
+    for idx, ts in enumerate(u.trajectory):
+        x.append(idx)
+        box = ts.dimensions
+
+        z_mem = popc.atoms.center_of_mass()[2]
+        d_pot = sorted(np.abs(pot.atoms.positions[:, 2] - z_mem))[0]
+        y.append(-d_pot)
+        # zlim_up = z_mem+farthest_lipid_z
+        # zlim_dw = z_mem-farthest_lipid_z
+
+        # hos = u.select_atoms(f"name OH* and prop z < {zlim_up} and prop z > {zlim_dw}")
+        # posz = sorted(np.abs(hos.atoms.positions[:, 2] - z_mem))
+
+
+    # plt.plot(x, y)
+
+    if out:
+        with open(out, 'w') as write:
+            # for idx, cv in zip(x, epsilons):
+            for idx in x:
+                line = f"{idx}\t{y[idx]}"
+                print(line)
+                write.write(line + "\n")
+    plt.show()

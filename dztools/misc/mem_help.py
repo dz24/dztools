@@ -101,3 +101,67 @@ def gyr_com2(pos, box, dim):
 
     return com
 
+
+def calc_chain(
+    u,
+    hoxy = "OH2 O11 O12 O13 O14",
+    lip= "resname POPC",
+    coord_n = 26,
+    coord_d = 1.0,
+    coord_r = 8.0,
+    coord_z = 0.75,
+    padding = 0.5,
+    coord_h = 0.25,
+):
+    """Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
+
+    from dztools.misc.mem_help import f_axial, f_radial, psi_switch
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import MDAnalysis as mda
+
+
+    lipid = u.select_atoms(f"{lip}")
+    epsilons = []
+    tpi = 2 * np.pi
+
+    z_mem = lipid.atoms.center_of_mass()[-1]
+    z_s = z_mem + (np.arange(coord_n) + 1 / 2 - coord_n / 2) * coord_d
+    hoxys = u.select_atoms(f"name {hoxy} and prop z < {z_s[-1]+padding} and prop z > {z_s[0]-padding}")
+    atoms_x = hoxys.atoms.positions[:, 0]
+    atoms_y = hoxys.atoms.positions[:, 1]
+    box = u.dimensions
+
+    ws_cyl = [0 for i in range(coord_n)]
+    in_axis = [0 for i in range(coord_n)]
+    in_radi = [0 for i in range(coord_n)]
+    x_sincyl, x_coscyl = 0, 0
+    y_sincyl, y_coscyl = 0, 0
+    ang_xs, ang_xc = np.sin(tpi * atoms_x / box[0]), np.cos(tpi * atoms_x / box[0])
+    ang_ys, ang_yc = np.sin(tpi * atoms_y / box[1]), np.cos(tpi * atoms_y / box[1])
+
+    for s in range(coord_n):
+        in_axis[s] = f_axial(hoxys.atoms.positions[:, 2], z_s[s], coord_d)
+        f_norm = np.sum(in_axis[s])
+        ws_cyl[s] = np.tanh(f_norm)
+        if f_norm == 0:
+            continue
+        x_sincyl += np.sum(in_axis[s] * ang_xs) * ws_cyl[s] / f_norm
+        x_coscyl += np.sum(in_axis[s] * ang_xc) * ws_cyl[s] / f_norm
+        y_sincyl += np.sum(in_axis[s] * ang_ys) * ws_cyl[s] / f_norm
+        y_coscyl += np.sum(in_axis[s] * ang_yc) * ws_cyl[s] / f_norm
+
+    x_sincyl /= np.sum(ws_cyl)
+    x_coscyl /= np.sum(ws_cyl)
+    y_sincyl /= np.sum(ws_cyl)
+    y_coscyl /= np.sum(ws_cyl)
+    x_cyl = (np.arctan2(-x_sincyl, -x_coscyl) + np.pi) * box[0] / tpi
+    y_cyl = (np.arctan2(-y_sincyl, -y_coscyl) + np.pi) * box[1] / tpi
+    in_radi = f_radial(hoxys.atoms.positions, x_cyl, y_cyl, coord_r, box, coord_h)
+    epsilon = 0
+    nsp = [0 for i in range(coord_n)]
+    for s in range(coord_n):
+        nsp[s] = np.sum(in_axis[s] * in_radi)
+        epsilon += psi_switch(nsp[s], coord_z)
+    epsilon /= coord_n
+    return epsilon

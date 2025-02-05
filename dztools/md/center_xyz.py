@@ -2,7 +2,6 @@ from typing import Annotated
 import typer
 
 
-
 def center_periodic(
     i: Annotated[str, typer.Option("-i", help="input")],
     o: Annotated[str, typer.Option("-o", help="output")],
