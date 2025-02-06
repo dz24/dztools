@@ -165,4 +165,4 @@ def calc_chain(
         epsilon += psi_switch(nsp[s], coord_z)
     epsilon /= coord_n
 
-    return epsilon
+    return epsilon, x_cyl, y_cyl
