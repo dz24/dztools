@@ -112,6 +112,10 @@ def calc_chain(
     coord_z = 0.75,
     padding = 0.5,
     coord_h = 0.25,
+    r0 = 4.05,
+    d0 = 10.0,
+    v0 = 29.96,
+    ep0 = 0.925,
 ):
     """Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
 
@@ -165,4 +169,25 @@ def calc_chain(
         epsilon += psi_switch(nsp[s], coord_z)
     epsilon /= coord_n
 
-    return epsilon, x_cyl, y_cyl
+    # expansion
+    exp_num = u.select_atoms(f"name {hoxy} and prop z > {z_mem - d0 - padding} and prop z < {z_mem + d0 + padding}")
+    exp_z = exp_num.atoms.positions[:, 2]
+    npr = np.sum(theta((exp_z - z_mem)/(d0/2), h=0.1))
+    rr = np.sqrt((npr*v0)/(np.pi*d0))
+
+    epsilon_e = epsilon + heavys(np.array([epsilon - ep0]), 0.05)*((rr-r0)/r0)
+
+    return epsilon, epsilon_e[0], x_cyl, y_cyl
+
+
+def heavys(x, eps):
+    import numpy as np
+    xnew = np.zeros(len(x))
+
+    # elif
+    xnew += (x <= eps) * (-eps <= x) * (1/2 + ((3*x)/(4*eps)) - (x**3)/(4*eps**3))
+
+    # else 
+    xnew += (x > eps) * 1
+
+    return xnew

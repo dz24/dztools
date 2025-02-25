@@ -130,7 +130,7 @@ def mem_chain(
     totlen = len(u.trajectory)
     for idx, ts in enumerate(u.trajectory):
         # Frame properties
-        epsilon = calc_chain(u, lip=lip)
+        epsilon, _, _ = calc_chain(u, lip=lip)
         epsilons.append(epsilon)
 
     # plot
@@ -1446,7 +1446,7 @@ def mem_ff3(
 
                 write.write(line + "\n")
 
-def mem_perm2(
+def mem_leafneig(
     top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
     plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
@@ -1460,7 +1460,6 @@ def mem_perm2(
 
     u = mda.Universe(top, xtc)
     popc = u.select_atoms("name P")
-    pot = u.select_atoms("name POT")
     plen = len(popc)//2
 
     x = []
@@ -1469,17 +1468,21 @@ def mem_perm2(
         x.append(idx)
         box = ts.dimensions
 
+        pos = lipid.atoms.positions
+        z_idxes = np.argsort(pos[:, 2])
+        lower_idx = z_idxes[:len(z_idxes)//2]
+        upper_idx = z_idxes[len(z_idxes)//2:]
+        lower = pos[:, 2][lower_idx]
+        upper = pos[:, 2][upper_idx]
+
+        dists = distances.distance_array(lower, upper, box=box)[0]
+
+
+
         z_mem = popc.atoms.center_of_mass()[2]
         d_pot = sorted(np.abs(pot.atoms.positions[:, 2] - z_mem))[0]
         y.append(-d_pot)
-        # zlim_up = z_mem+farthest_lipid_z
-        # zlim_dw = z_mem-farthest_lipid_z
 
-        # hos = u.select_atoms(f"name OH* and prop z < {zlim_up} and prop z > {zlim_dw}")
-        # posz = sorted(np.abs(hos.atoms.positions[:, 2] - z_mem))
-
-
-    # plt.plot(x, y)
 
     if out:
         with open(out, 'w') as write:
@@ -1489,3 +1492,118 @@ def mem_perm2(
                 print(line)
                 write.write(line + "\n")
     plt.show()
+
+
+def mem_ff4(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
+):
+    """Plot how flat lipids are"""
+    import MDAnalysis as mda
+    from MDAnalysis.analysis import distances
+    import numpy as np
+    from dztools.misc.mem_help import f_axial, f_radial, psi_switch
+
+    print(top, xtc)
+    u = mda.Universe(top, xtc)
+    lipid = u.select_atoms("name P")
+    p_upper = u.select_atoms("name P and resid 1 to 64")
+    p_lower = u.select_atoms("name P and resid 65 to 128")
+
+    x = []
+    ops1 = []
+    for idx, ts in enumerate(u.trajectory):
+        x.append(idx)
+        box = ts.dimensions
+
+        com_u = p_upper.atoms.center_of_mass()[2]
+        com_l = p_lower.atoms.center_of_mass()[2]
+
+        op_1 = np.abs(min(p_upper.atoms.positions[:, 2]) - com_u)
+        op_2 = np.abs(max(p_lower.atoms.positions[:, 2]) - com_l)
+
+        op1 = op_1 + op_2
+        ops1.append(op1)
+
+    if out:
+        with open(out, 'w') as write:
+            for idx in x:
+                line = f"{idx}\t{ops1[idx]}"
+                write.write(line + "\n")
+
+def mem_cff(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    hoxy: Annotated[
+        str, typer.Option("-hoxy", help="xtc file")
+    ] = "OH2 O11 O12 O13 O14",
+    lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "resname DMPC",
+    coord_n: Annotated[int, typer.Option("-coord_n")] = 26,
+    coord_d: Annotated[float, typer.Option("-coord_d")] = 1.0,
+    coord_r: Annotated[float, typer.Option("-coord_r")] = 8.0,
+    coord_z: Annotated[float, typer.Option("-coord_z")] = 0.75,
+    padding: Annotated[float, typer.Option("-padding")] = 0.5,
+    coord_h: Annotated[float, typer.Option("-coord_h")] = 0.25,
+    plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
+):
+    """Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
+
+    from dztools.misc.mem_help import calc_chain
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import MDAnalysis as mda
+
+    # load top and xtc into MDA
+    u = mda.Universe(top, xtc)
+
+    lipid = u.select_atoms(f"{lip}")
+    lipid_p = u.select_atoms(f"name P")
+    epsilons = []
+    tpi = 2 * np.pi
+
+    totlen = len(u.trajectory)
+    ff = []
+    cff = []
+    cffe = []
+    for idx, ts in enumerate(u.trajectory):
+        # Frame properties
+        epsilon, epsilon_e, _, _ = calc_chain(u, lip=lip, coord_r = coord_r)
+        epsilons.append(epsilon)
+        cffe.append(epsilon_e)
+
+        # flipflop 2
+        lip_z = lipid_p.atoms.positions[:, 2]
+        z_idxes = np.argsort(lip_z)
+        dz_list = []
+        for ii in range(2):
+            z_hmax = z_idxes[len(z_idxes)//2 +ii]
+            z_hmin = z_idxes[len(z_idxes)//2-(1+ii)]
+            dz_list.append(np.abs(lip_z[z_hmin] - lip_z[z_hmax]))
+
+        # OP:
+        # lambda = epsilon - b*ff
+        b = 0.01
+        op = epsilon - b*dz_list[0]
+        ff.append(- b*dz_list[0])
+
+        # IF IN UNSTABLE FF STATE, GO TO B...
+        if epsilon < 0.6 and -dz_list[0] > -5:
+            op1 = 0.99
+        else:
+            op1 = op
+
+        cff.append(op1)
+
+    # plot
+    if plot:
+        plt.plot(np.arange(len(epsilons)), epsilons)
+        plt.show()
+
+    if out:
+        with open(out, 'w') as write:
+            for idx, cv in zip(np.arange(len(epsilons)), epsilons):
+                write.write(f"{idx}\t{cff[idx]:.08f}\t{ff[idx]:.08f}\t{cv:.08f}\t{cffe[idx]:.08f}\n")
+
+    return np.array(epsilons)
