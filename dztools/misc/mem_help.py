@@ -177,7 +177,7 @@ def calc_chain(
 
     epsilon_e = epsilon + heavys(np.array([epsilon - ep0]), 0.05)*((rr-r0)/r0)
 
-    return epsilon, epsilon_e[0], x_cyl, y_cyl
+    return epsilon, epsilon_e[0], x_cyl, y_cyl, nsp
 
 
 def heavys(x, eps):

@@ -128,10 +128,14 @@ def mem_chain(
     tpi = 2 * np.pi
 
     totlen = len(u.trajectory)
+    x, y, box = [], [], []
     for idx, ts in enumerate(u.trajectory):
         # Frame properties
-        epsilon, _, _ = calc_chain(u, lip=lip)
+        box.append(ts.dimensions[:3].copy())
+        epsilon, _, x0, y0, _ = calc_chain(u, lip=lip, hoxy=hoxy)
         epsilons.append(epsilon)
+        x.append(x0)
+        y.append(y0)
 
     # plot
     if plot:
@@ -141,7 +145,11 @@ def mem_chain(
     if out:
         with open(out, 'w') as write:
             for idx, cv in zip(np.arange(len(epsilons)), epsilons):
-                write.write(f"{idx}\t{cv:.08f}\n")
+                # write.write(f"{idx}\t{cv:.08f}\n")
+                towrite = f"{idx}\t{cv:.08f}\t{x[idx]:.08f}\t{y[idx]:.08f}\t{box[idx][0]:.08f}"
+                towrite += f"\t{box[idx][2]:.08f}"
+                towrite += "\n"
+                write.write(towrite)
 
     return np.array(epsilons)
 
@@ -665,8 +673,6 @@ def mem_rdf(
     hist = np.zeros(h_len)
     dens_avg = np.average([0.00041632855753776275, 0.0004151167125516087])
     traj_len2 = len(u.trajectory)
-    # for idx, ts in enumerate(u.trajectory[traj_len2//2:]):
-    # for idx, ts in enumerate(u.trajectory[:traj_len2//2]):
     for idx, ts in enumerate(u.trajectory):
         x.append(idx)
         box = ts.dimensions
@@ -689,8 +695,6 @@ def mem_rdf(
 
     hist_norm = np.zeros(h_len)
     dr = r_lin[1] - r_lin[0]
-    # dens_avg = np.average(dens)
-    # print("dens_avg", dens_avg)
     traj_len = len(x)
     for idx, hi in enumerate(hist):
         ri0 = r_lin[idx]
@@ -751,9 +755,6 @@ def mem_rdf2(
     # ax = plt.figure().add_subplot(projection="3d")
     maxh = []
     r_dists_list = []
-    # with open(out, "w") as write:
-        # write.write(f"{traj_len2*h_len}\n")
-        # write.write("\n")
     blasts = []
     blasts2 = []
     hist_sorted_acc = np.zeros(h_len)
@@ -1477,12 +1478,9 @@ def mem_leafneig(
 
         dists = distances.distance_array(lower, upper, box=box)[0]
 
-
-
         z_mem = popc.atoms.center_of_mass()[2]
         d_pot = sorted(np.abs(pot.atoms.positions[:, 2] - z_mem))[0]
         y.append(-d_pot)
-
 
     if out:
         with open(out, 'w') as write:
@@ -1565,16 +1563,20 @@ def mem_cff(
 
     totlen = len(u.trajectory)
     ff = []
+    ff2 = []
     cff = []
     cffe = []
+    z_mins = []
     for idx, ts in enumerate(u.trajectory):
         # Frame properties
-        epsilon, epsilon_e, _, _ = calc_chain(u, lip=lip, coord_r = coord_r)
+        epsilon, epsilon_e, _, _, _ = calc_chain(u, lip=lip, coord_r = coord_r)
         epsilons.append(epsilon)
         cffe.append(epsilon_e)
 
         # flipflop 2
         lip_z = lipid_p.atoms.positions[:, 2]
+        z_mem = lipid.atoms.center_of_mass()[-1]
+        z_mins.append(np.min(np.abs(lip_z - z_mem)))
         z_idxes = np.argsort(lip_z)
         dz_list = []
         for ii in range(2):
@@ -1586,7 +1588,8 @@ def mem_cff(
         # lambda = epsilon - b*ff
         b = 0.01
         op = epsilon - b*dz_list[0]
-        ff.append(- b*dz_list[0])
+        ff.append(-b*dz_list[0])
+        ff2.append(-b*dz_list[1])
 
         # IF IN UNSTABLE FF STATE, GO TO B...
         if epsilon < 0.6 and -dz_list[0] > -5:
@@ -1604,6 +1607,190 @@ def mem_cff(
     if out:
         with open(out, 'w') as write:
             for idx, cv in zip(np.arange(len(epsilons)), epsilons):
-                write.write(f"{idx}\t{cff[idx]:.08f}\t{ff[idx]:.08f}\t{cv:.08f}\t{cffe[idx]:.08f}\n")
+                write.write(f"{idx}\t{cff[idx]:.08f}\t{ff[idx]:.08f}\t{ff2[idx]:.08f}\t{cv:.08f}\t{cffe[idx]:.08f}\t{z_mins[idx]:.08f}\n")
 
     return np.array(epsilons)
+
+
+
+def mem_rdf4(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    num: Annotated[int, typer.Option("-num", help="lipid number")] = 10,
+    plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
+    hoxy: Annotated[
+        str, typer.Option("-hoxy", help="xtc file")
+    ] = "OH2 O11 O12 O13 O14",
+    lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "resname DMPC",
+    coord_n: Annotated[int, typer.Option("-coord_n")] = 26,
+    coord_d: Annotated[float, typer.Option("-coord_d")] = 1.0,
+    coord_r: Annotated[float, typer.Option("-coord_r")] = 8.0,
+    coord_z: Annotated[float, typer.Option("-coord_z")] = 0.75,
+    padding: Annotated[float, typer.Option("-padding")] = 0.5,
+    coord_h: Annotated[float, typer.Option("-coord_h")] = 0.25,
+    color: Annotated[str, typer.Option("-color")] = "C0",
+):
+    """Plot closest lipids to MEMCOM"""
+    import MDAnalysis as mda
+    from MDAnalysis.analysis import distances
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from dztools.misc.mem_help import calc_chain
+
+    u = mda.Universe(top, xtc)
+    lipid = u.select_atoms("name P")
+    tpi = 2 * np.pi
+
+    x = []
+    # count from 0 - 10
+    r_cap = 30
+    h_len = 120
+    r_lin = np.linspace(0, r_cap, h_len)
+    dr = r_lin[1] - r_lin[0]
+    hist = np.zeros(h_len)
+    dens_avg = np.average([0.00041632855753776275, 0.0004151167125516087])
+    traj_len2 = len(u.trajectory)
+
+    maxh = []
+    r_dists_list = []
+    for idx, ts in enumerate(u.trajectory):
+        x.append(idx)
+        box = ts.dimensions
+        z_mem = lipid.atoms.center_of_mass()[-1]
+
+        epsilon, _, x_cyl, y_cyl = calc_chain(u, lip=lip)
+
+        # flipflop 2
+        lip_z = lipid.atoms.positions[:, 2]
+        z_idxes = np.argsort(lip_z)
+        dz_list = []
+        for ii in range(1):
+            z_hmax = z_idxes[len(z_idxes)//2 +ii]
+            z_hmin = z_idxes[len(z_idxes)//2-(1+ii)]
+            dz_list.append(np.abs(lip_z[z_hmin] - lip_z[z_hmax]))
+
+        b = 0.01
+        op = epsilon - b*dz_list[0]
+        if op > 0.3:
+            print(epsilon, b*dz_list[0])
+            continue
+
+        z_s = z_mem + (np.arange(coord_n) + 1 / 2 - coord_n / 2) * coord_d
+        r_dists = distances.distance_array(np.array([x_cyl, y_cyl, z_mem]),
+                                           lipid.atoms.positions, box=box)[0]
+        for r_dist in sorted(r_dists):
+            r_idx = int((r_dist/r_cap)*100)
+            if r_idx >= 100:
+                continue
+            hist[r_idx] += 1
+
+    hist_norm = np.zeros(h_len)
+    dr = r_lin[1] - r_lin[0]
+    traj_len = len(x)
+    for idx, hi in enumerate(hist):
+        ri0 = r_lin[idx]
+        ri1 = ri0 + dr
+        div = (4/3)*np.pi*(ri1**3 - ri0**3)
+        hist_norm[idx] = hi/(div*traj_len)
+    print("cheeze")
+
+    plt.plot(r_lin, hist_norm, color='k')
+    if out:
+        with open(out, 'w') as write:
+            for idx in range(h_len):
+                line = f"{r_lin[idx]}\t{hist_norm[idx]}"
+                write.write(line + "\n")
+    plt.show()
+
+
+def mem_cyl(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    num: Annotated[int, typer.Option("-num", help="lipid number")] = 10,
+    plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
+    hoxy: Annotated[
+        str, typer.Option("-hoxy", help="xtc file")
+    ] = "OH2 O11 O12 O13 O14",
+    lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "resname DMPC",
+    coord_n: Annotated[int, typer.Option("-coord_n")] = 26,
+    coord_d: Annotated[float, typer.Option("-coord_d")] = 1.0,
+    coord_r: Annotated[float, typer.Option("-coord_r")] = 8.0,
+    coord_z: Annotated[float, typer.Option("-coord_z")] = 0.75,
+    padding: Annotated[float, typer.Option("-padding")] = 0.5,
+    coord_h: Annotated[float, typer.Option("-coord_h")] = 0.25,
+    color: Annotated[str, typer.Option("-color")] = "C0",
+):
+    """Plot closest lipids to MEMCOM"""
+    import MDAnalysis as mda
+    from MDAnalysis.analysis import distances
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from dztools.misc.mem_help import calc_chain
+
+    u = mda.Universe(top, xtc)
+    lipid = u.select_atoms("name P")
+    tpi = 2 * np.pi
+
+    x = []
+    nsp_h = np.zeros(26)
+    nsp_h2 = np.zeros(26)
+    nsp_h3 = np.zeros(26)
+    xcyls, ycyls = [], []
+    xcyls2, ycyls2 = [], []
+    xcyls3, ycyls3 = [], []
+    eps, ds, ops = [], [], []
+    for idx, ts in enumerate(u.trajectory):
+        box = ts.dimensions
+        z_mem = lipid.atoms.center_of_mass()[-1]
+
+        epsilon, _, x_cyl, y_cyl, nsp = calc_chain(u, lip=lip)
+        _, _, x_cyl2, y_cyl2, nsp2 = calc_chain(u, lip=lip, hoxy="O11 O12 O13 O14")
+        _, _, x_cyl3, y_cyl3, nsp3 = calc_chain(u, lip=lip, hoxy="OH2")
+        xcyls.append(x_cyl)
+        ycyls.append(y_cyl)
+        xcyls2.append(x_cyl2)
+        ycyls2.append(y_cyl2)
+        xcyls3.append(x_cyl3)
+        ycyls3.append(y_cyl3)
+
+        # flipflop 2
+        lip_z = lipid.atoms.positions[:, 2]
+        z_idxes = np.argsort(lip_z)
+        dz_list = []
+        for ii in range(1):
+            z_hmax = z_idxes[len(z_idxes)//2 +ii]
+            z_hmin = z_idxes[len(z_idxes)//2-(1+ii)]
+            dz_list.append(np.abs(lip_z[z_hmin] - lip_z[z_hmax]))
+
+        b = 0.01
+        op = epsilon - b*dz_list[0]
+        if op > 0.2550:
+            continue
+
+        eps.append(epsilon)
+        ds.append(dz_list[0])
+        ops.append(op)
+
+        x.append(idx)
+        nsp_h += nsp
+        nsp_h2 += nsp2
+        nsp_h3 += nsp3
+
+
+    if out:
+        if 0 in [np.sum(nsp_h), np.sum(nsp_h2), np.sum(nsp_h3)]:
+            return False
+        with open(out, 'w') as write:
+            line = f"# recalc, samples: {len(x)}\n"
+            line += f"# avg_eps {np.average(eps)}\n"
+            line += f"# avg_d1 {np.average(ds)}\n"
+            line += f"# avg_ops {np.average(ops)}"
+            write.write(line + "\n")
+            for idx in range(len(nsp_h)):
+                line = f"{idx}\t{nsp_h[idx]/len(x):.04f}\t{nsp_h2[idx]/len(x):.04f}\t{nsp_h3[idx]/len(x):.04f}"
+                #line += f"\t{box[0]:.04f}\t{xcyl[idx]:.04f}\t{y_cyl:.04f}\t{x_cyl2:.04f}\t{y_cyl2:.04f}\t{x_cyl3:.04f}\t{y_cyl3:.04f}"
+                write.write(line + "\n")
+    # plt.show()
+    return True
