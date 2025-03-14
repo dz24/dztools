@@ -132,7 +132,14 @@ def mem_chain(
     for idx, ts in enumerate(u.trajectory):
         # Frame properties
         box.append(ts.dimensions[:3].copy())
-        epsilon, _, x0, y0, _ = calc_chain(u, lip=lip, hoxy=hoxy)
+        epsilon, _, x0, y0, _ = calc_chain(
+            u,
+            lip=lip,
+            hoxy=hoxy,
+            coord_n=coord_n,
+            coord_d=coord_d,
+            coord_z=coord_z,
+            coord_h=coord_h)
         epsilons.append(epsilon)
         x.append(x0)
         y.append(y0)
