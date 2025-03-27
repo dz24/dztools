@@ -1801,3 +1801,152 @@ def mem_cyl(
                 write.write(line + "\n")
     # plt.show()
     return True
+
+
+def mem_mic(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
+):
+    """Plot how flat lipids are"""
+    import MDAnalysis as mda
+    from MDAnalysis.analysis.distances import distance_array
+    import numpy as np
+    from dztools.misc.mem_help import f_axial, f_radial, psi_switch
+    from dztools.misc.mem_help import pcom_axis
+    import matplotlib.pyplot as plt
+
+    print(top, xtc)
+    u = mda.Universe(top, xtc)
+    plip = u.select_atoms("name P and resid 1 to 178")
+    ball = u.select_atoms("resid 1 to 50 and name P")
+    memb = u.select_atoms("resid 51 to 306 and name P")
+
+    x = []
+    ops1 = []
+    ops2 = []
+    ops3 = []
+    ops4 = []
+    for idx, ts in enumerate(u.trajectory):
+        x.append(idx)
+        box = ts.dimensions[:3]
+        mcom = memb.center_of_mass()
+        bcom = ball.center_of_mass()
+
+        zcom = np.array([0, 0, mcom[2]])
+        zball = ball.atoms.positions[:, 2]
+        ballp = ball.atoms.positions.copy()
+        ballp[:, 0] *= 0
+        ballp[:, 1] *= 0
+
+        boxx = list(box[:3]) + [90.]*3
+        da = distance_array(zcom, ballp, box=boxx)[0]
+        da_avg = np.average(da)
+
+        bcom_x = pcom_axis(ball.positions[:, 0], box[0])
+        bcom_y = pcom_axis(ball.positions[:, 1], box[1])
+        bcom_z = pcom_axis(ball.positions[:, 2], box[2])
+        # print("box", box[0], box[1], box[2])
+        # print("ball com", bcom_x, bcom_y, bcom_z)
+
+        # asort = np.argsort(da)
+        # zsum = 0
+        # bcom2 = bcom.copy()
+        # bcom2[2] = 0
+        # for at_idx in asort[:5]:
+        #     bpos = ball.atoms[at_idx].position.copy()
+        #     bpos[2] = 0
+        #     atd = distance_array(bpos, bcom2, box=boxx)[0][0]
+        #     print(atd)
+        #     zsum += atd
+        # ops4.append(zsum)
+
+        # if idx == 10:
+        #     exit()
+
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+        ax.scatter(
+            plip.atoms.positions[:, 0],
+            plip.atoms.positions[:, 1],
+            plip.atoms.positions[:, 2],
+        color="C0")
+
+        lz, hz = min((mcom[2], bcom_z)), max((mcom[2], bcom_z))
+        # print("low, high", lz, hz)
+        # heh = u.select_atoms(f"name P and prop z >= {lz} and prop z <= {hz}")
+        half = u.select_atoms(f"name P and resid 1 to 50 and prop z >= {lz} and prop z <= {hz}")
+        bcom2_x = pcom_axis(half.positions[:, 0], box[0])
+        bcom2_y = pcom_axis(half.positions[:, 1], box[1])
+        bcom2_z = pcom_axis(half.positions[:, 2], box[2])
+        # half = u.select_atoms(f"name P and resid 1 to 50")
+        print("len", len(half.atoms))
+        half_posz = half.atoms.positions.copy()
+        half_posz[:, 0] *= 0
+        half_posz[:, 1] *= 0
+        # daz = distance_array(half_posz, half, box=boxx)[0]
+        daz = distance_array(zcom, half_posz, box=boxx)[0]
+        asort = np.argsort(daz)
+        zsum = 0
+        bcom2 = np.array([bcom2_x, bcom2_y, 0])
+
+        # print(asort)
+        for at_idx in asort[:10]:
+            bpos = half.atoms[at_idx].position.copy()
+            ax.scatter(
+                bpos[ 0],
+                bpos[ 1],
+                bpos[ 2],
+            color="C2", s=100)
+            bpos[2] = 0
+            atd = distance_array(bpos, bcom2, box=boxx)[0][0]
+            print('sn', atd)
+            zsum += atd
+        ops4.append(zsum)
+        print("snow", zsum)
+
+        ax.scatter(
+            half.atoms.positions[:, 0],
+            half.atoms.positions[:, 1],
+            half.atoms.positions[:, 2],
+        color="C3", s=50)
+
+        ax.scatter(
+            bcom2_x,
+            bcom2_y,
+            bcom2_z,
+            color="C1", s=50)
+        print("oprd", zsum)
+        plt.title(f"{zsum}")
+        plt.show()
+        exit()
+
+        # half = u.select_atoms(f"name P and resid 1 to 50 and prop z >= {lz} and prop z <= {hz}")
+        # print("heiH", len(half.atoms))
+        # exit()
+        # half_pos = half.atoms.positions
+        # # half_pos = ball.atoms.positions
+        # half_pos[:, 2] *= 0
+        # zda = sorted(distance_array(np.array([bcom_x, bcom_y, 0]), half_pos, box=boxx)[0])[:5]
+        # ops4.append(sum(zda))
+        # # print(" ".join([f"{i:.04f}" for i in zda]))
+        # print("ha?", sum(zda))
+
+
+        # half = u.select_atoms(f"resid 1 to 50 and name P and prop z <= {hz}")
+        # exit()
+
+        # cyl
+        daball = sorted(distance_array(bcom, ballp, box=boxx)[0])
+        # bdadel = max(daball) - min(daball)
+        bdadel = np.average(daball[-5:]) - np.average(daball[:5])
+
+        ops1.append(da_avg)
+        ops2.append(bdadel)
+        ops3.append(sum(daball[-5:]))
+
+    if out:
+        with open(out, 'w') as write:
+            for idx in x:
+                line = f"{idx}\t{ops1[idx]}\t{ops2[idx]}\t{ops3[idx]}\t{ops4[idx]}"
+                write.write(line + "\n")

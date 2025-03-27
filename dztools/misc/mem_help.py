@@ -124,7 +124,6 @@ def calc_chain(
     import numpy as np
     import MDAnalysis as mda
 
-
     lipid = u.select_atoms(f"{lip}")
     epsilons = []
     tpi = 2 * np.pi
@@ -191,3 +190,22 @@ def heavys(x, eps):
     xnew += (x > eps) * 1
 
     return xnew
+
+
+def pcom_axis(pos, box):
+    import numpy as np
+
+    tpi = np.pi * 2
+    ang_s = np.sin(tpi * pos / box)
+    ang_c = np.cos(tpi * pos / box)
+
+    avg_s = np.average(ang_s)
+    avg_c = np.average(ang_c)
+
+    com = (np.arctan2(-avg_s, - avg_c) + np.pi) * box / tpi
+    return com
+
+def periodic_com(pos, box):
+    com_x = pcom_axis(pos[:, 0], box[0])
+    com_y = pcom_axis(pos[:, 1], box[1])
+    return com_x, com_y
