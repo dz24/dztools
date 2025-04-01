@@ -17,10 +17,10 @@ FOLDERS = ["funcs", "md", "mem", "chem"]
 MAPPER = get_mapper(FOLDERS, MOD_PATH)
 
 # # manually add function from other folder
-MAPPER["log"] = log
+# MAPPER["log"] = log
 
 # log the command
-dzlog(" ".join(sys.argv) + "\n", MOD_PATH)
+# dzlog(" ".join(sys.argv) + "\n", MOD_PATH)
 
 # create the typer app
 app = typer.Typer(

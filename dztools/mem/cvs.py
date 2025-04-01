@@ -1811,6 +1811,7 @@ def mem_mic(
     """Plot how flat lipids are"""
     import MDAnalysis as mda
     from MDAnalysis.analysis.distances import distance_array
+    from MDAnalysis.lib.pkdtree import PeriodicKDTree
     import numpy as np
     from dztools.misc.mem_help import f_axial, f_radial, psi_switch
     from dztools.misc.mem_help import pcom_axis
@@ -1830,11 +1831,13 @@ def mem_mic(
     for idx, ts in enumerate(u.trajectory):
         x.append(idx)
         box = ts.dimensions[:3]
+        tree = PeriodicKDTree(box=ts.dimensions)
         mcom = memb.center_of_mass()
         bcom = ball.center_of_mass()
 
         zcom = np.array([0, 0, mcom[2]])
         zball = ball.atoms.positions[:, 2]
+
         ballp = ball.atoms.positions.copy()
         ballp[:, 0] *= 0
         ballp[:, 1] *= 0
@@ -1843,83 +1846,88 @@ def mem_mic(
         da = distance_array(zcom, ballp, box=boxx)[0]
         da_avg = np.average(da)
 
-        bcom_x = pcom_axis(ball.positions[:, 0], box[0])
-        bcom_y = pcom_axis(ball.positions[:, 1], box[1])
         bcom_z = pcom_axis(ball.positions[:, 2], box[2])
-        # print("box", box[0], box[1], box[2])
-        # print("ball com", bcom_x, bcom_y, bcom_z)
+        lz, hz = min((mcom[2], bcom_z)), max((mcom[2], bcom_z))
+        half = u.select_atoms(f"name P and prop z >= {lz} and prop z <= {hz}")
+        hpos = half.atoms.positions.copy()
+        hpos[:, 2] *= 0
+        tree.set_coords(hpos, cutoff=20) # pbc cutoff or something
 
-        # asort = np.argsort(da)
+        samples = 50
+        xlim = np.linspace(0, box[0], samples)
+        X, Y = np.meshgrid(xlim, xlim)  # Create 2D grids
+        w = np.array([X.flatten(), Y.flatten(), np.zeros(samples**2)]).T
+        hehe = tree.search_tree(w, radius=8.)
+        all_indices = np.arange(len(X.flatten()))
+        idxes = np.setdiff1d(all_indices, hehe[:, 0])
+        print(idx, len(idxes))
+        # print("nani", idxes, len(idxes))
+        # if len(idxes) > 0:
+        #     bcom_x = pcom_axis(w[:, 0][idxes], box[0])
+        #     bcom_y = pcom_axis(w[:, 1][idxes], box[1])
+        #     pcom = np.array([bcom_x, bcom_y, 0])
+
+        #     daz = distance_array(pcom, hpos, box=ts.dimensions)[0]
+        #     asort = np.argsort(daz)
+        #     plt.scatter(hpos[:, 0][asort[:5]], hpos[:, 1][asort[:5]], alpha=0.8, s=100)
+        #     op = np.sum(sorted(daz)[:5])
+
+        #     print("uhuh", daz)
+        #     # exit()
+
+        #     plt.scatter(X.flatten()[idxes], Y.flatten()[idxes], marker="x")
+        #     plt.scatter(bcom_x, bcom_y, s=50)
+        # else:
+        #     op = 0
+        # plt.scatter(hpos[:, 0], hpos[:, 1])
+        # plt.title(f"{len(idxes)}")
+        # plt.show()
+        # exit()
+
+        # bcom2_x = pcom_axis(half.positions[:, 0], box[0])
+        # bcom2_y = pcom_axis(half.positions[:, 1], box[1])
+        # bcom2_z = pcom_axis(half.positions[:, 2], box[2])
+        # # half = u.select_atoms(f"name P and resid 1 to 50")
+        # print("len", len(half.atoms))
+        # half_posz = half.atoms.positions.copy()
+        # half_posz[:, 0] *= 0
+        # half_posz[:, 1] *= 0
+        # # daz = distance_array(half_posz, half, box=boxx)[0]
+        # daz = distance_array(zcom, half_posz, box=boxx)[0]
+        # asort = np.argsort(daz)
         # zsum = 0
-        # bcom2 = bcom.copy()
-        # bcom2[2] = 0
-        # for at_idx in asort[:5]:
-        #     bpos = ball.atoms[at_idx].position.copy()
+        # bcom2 = np.array([bcom2_x, bcom2_y, 0])
+
+        # # print(asort)
+        # for at_idx in asort[:10]:
+        #     bpos = half.atoms[at_idx].position.copy()
+        #     ax.scatter(
+        #         bpos[ 0],
+        #         bpos[ 1],
+        #         bpos[ 2],
+        #     color="C2", s=100)
         #     bpos[2] = 0
         #     atd = distance_array(bpos, bcom2, box=boxx)[0][0]
-        #     print(atd)
+        #     print('sn', atd)
         #     zsum += atd
         # ops4.append(zsum)
+        # print("snow", zsum)
 
-        # if idx == 10:
-        #     exit()
+        # ax.scatter(
+        #     half.atoms.positions[:, 0],
+        #     half.atoms.positions[:, 1],
+        #     half.atoms.positions[:, 2],
+        # color="C3", s=50)
 
-        fig = plt.figure()
-        ax = fig.add_subplot(projection='3d')
-        ax.scatter(
-            plip.atoms.positions[:, 0],
-            plip.atoms.positions[:, 1],
-            plip.atoms.positions[:, 2],
-        color="C0")
-
-        lz, hz = min((mcom[2], bcom_z)), max((mcom[2], bcom_z))
-        # print("low, high", lz, hz)
-        # heh = u.select_atoms(f"name P and prop z >= {lz} and prop z <= {hz}")
-        half = u.select_atoms(f"name P and resid 1 to 50 and prop z >= {lz} and prop z <= {hz}")
-        bcom2_x = pcom_axis(half.positions[:, 0], box[0])
-        bcom2_y = pcom_axis(half.positions[:, 1], box[1])
-        bcom2_z = pcom_axis(half.positions[:, 2], box[2])
-        # half = u.select_atoms(f"name P and resid 1 to 50")
-        print("len", len(half.atoms))
-        half_posz = half.atoms.positions.copy()
-        half_posz[:, 0] *= 0
-        half_posz[:, 1] *= 0
-        # daz = distance_array(half_posz, half, box=boxx)[0]
-        daz = distance_array(zcom, half_posz, box=boxx)[0]
-        asort = np.argsort(daz)
-        zsum = 0
-        bcom2 = np.array([bcom2_x, bcom2_y, 0])
-
-        # print(asort)
-        for at_idx in asort[:10]:
-            bpos = half.atoms[at_idx].position.copy()
-            ax.scatter(
-                bpos[ 0],
-                bpos[ 1],
-                bpos[ 2],
-            color="C2", s=100)
-            bpos[2] = 0
-            atd = distance_array(bpos, bcom2, box=boxx)[0][0]
-            print('sn', atd)
-            zsum += atd
-        ops4.append(zsum)
-        print("snow", zsum)
-
-        ax.scatter(
-            half.atoms.positions[:, 0],
-            half.atoms.positions[:, 1],
-            half.atoms.positions[:, 2],
-        color="C3", s=50)
-
-        ax.scatter(
-            bcom2_x,
-            bcom2_y,
-            bcom2_z,
-            color="C1", s=50)
-        print("oprd", zsum)
-        plt.title(f"{zsum}")
-        plt.show()
-        exit()
+        # ax.scatter(
+        #     bcom2_x,
+        #     bcom2_y,
+        #     bcom2_z,
+        #     color="C1", s=50)
+        # print("oprd", zsum)
+        # plt.title(f"{zsum}")
+        # plt.show()
+        # exit()
 
         # half = u.select_atoms(f"name P and resid 1 to 50 and prop z >= {lz} and prop z <= {hz}")
         # print("heiH", len(half.atoms))
@@ -1944,6 +1952,7 @@ def mem_mic(
         ops1.append(da_avg)
         ops2.append(bdadel)
         ops3.append(sum(daball[-5:]))
+        ops4.append(len(idxes))
 
     if out:
         with open(out, 'w') as write:
