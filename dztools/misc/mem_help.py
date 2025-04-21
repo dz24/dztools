@@ -172,6 +172,9 @@ def calc_chain(
     exp_num = u.select_atoms(f"name {hoxy} and prop z > {z_mem - d0 - padding} and prop z < {z_mem + d0 + padding}")
     exp_z = exp_num.atoms.positions[:, 2]
     npr = np.sum(theta((exp_z - z_mem)/(d0/2), h=0.1))
+    # due to numerical error, npr can become negative when really it is just should become 0.
+    if npr < 0:
+        npr = 0
     rr = np.sqrt((npr*v0)/(np.pi*d0))
 
     epsilon_e = epsilon + heavys(np.array([epsilon - ep0]), 0.05)*((rr-r0)/r0)
