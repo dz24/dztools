@@ -1576,7 +1576,7 @@ def mem_cff(
     z_mins = []
     for idx, ts in enumerate(u.trajectory):
         # Frame properties
-        epsilon, epsilon_e, _, _, _ = calc_chain(u, lip=lip, coord_r = coord_r)
+        epsilon, epsilon_e, _, _, _ = calc_chain(u, lip=lip, coord_r = coord_r, coord_n=coord_n)
         epsilons.append(epsilon)
         cffe.append(epsilon_e)
 
@@ -1594,7 +1594,7 @@ def mem_cff(
         # OP:
         # lambda = epsilon - b*ff
         b = 0.01
-        op = epsilon - b*dz_list[0]
+        op = epsilon_e - b*(dz_list[0] + dz_list[1])
         ff.append(-b*dz_list[0])
         ff2.append(-b*dz_list[1])
 
@@ -1959,3 +1959,81 @@ def mem_mic(
             for idx in x:
                 line = f"{idx}\t{ops1[idx]}\t{ops2[idx]}\t{ops3[idx]}\t{ops4[idx]}"
                 write.write(line + "\n")
+
+
+def mem_pfcvs(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    hoxy: Annotated[
+        str, typer.Option("-hoxy", help="xtc file")
+    ] = "OH2 O11 O12 O13 O14",
+    lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "resname DMPC",
+    coord_n: Annotated[int, typer.Option("-coord_n")] = 26,
+    coord_d: Annotated[float, typer.Option("-coord_d")] = 1.0,
+    coord_r: Annotated[float, typer.Option("-coord_r")] = 8.0,
+    coord_z: Annotated[float, typer.Option("-coord_z")] = 0.75,
+    padding: Annotated[float, typer.Option("-padding")] = 0.5,
+    coord_h: Annotated[float, typer.Option("-coord_h")] = 0.25,
+    plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
+):
+    """Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
+
+    from dztools.misc.mem_help import calc_chain
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import MDAnalysis as mda
+
+    # load top and xtc into MDA
+    u = mda.Universe(top, xtc)
+
+    lipid = u.select_atoms(f"{lip}")
+    lipid_p = u.select_atoms(f"name P")
+    tpi = 2 * np.pi
+
+    totlen = len(u.trajectory)
+    eps_ch, eps_p = [], []
+    cylx, cyly = [], []
+    d1, d2, d3 = [], [], []
+    d12, d123 = [], []
+    dph, symff = [], []
+
+    lip_z = lipid_p.atoms.positions[:, 2]
+    z_idxes0 = np.argsort(lip_z)[:64]
+
+    for idx, ts in enumerate(u.trajectory):
+        # Frame properties
+        epsilon, epsilon_e, x0, y0, _ = calc_chain(u, lip=lip, coord_r = coord_r, coord_n=coord_n)
+        eps_ch.append(epsilon)
+        eps_p.append(epsilon_e)
+        cylx.append(x0)
+        cyly.append(y0)
+
+        # flipflop 2
+        lip_z = lipid_p.atoms.positions[:, 2]
+        z_mem = lipid.atoms.center_of_mass()[-1]
+        z_idxes = np.argsort(lip_z)
+        dz_list = []
+        for ii in range(3):
+            z_hmax = z_idxes[len(z_idxes)//2 +ii]
+            z_hmin = z_idxes[len(z_idxes)//2-(1+ii)]
+            dz_list.append(np.abs(lip_z[z_hmin] - lip_z[z_hmax]))
+
+        d1.append(dz_list[0])
+        d2.append(dz_list[1])
+        d3.append(dz_list[2])
+        d12.append(dz_list[0] + dz_list[1])
+        d123.append(dz_list[0] + dz_list[1] + dz_list[2])
+        dph.append(np.min(np.abs(lip_z - z_mem)))
+
+        symff.append(64 - len([i for i in z_idxes if i in z_idxes0]))
+
+
+    if out:
+        with open(out, 'w') as write:
+            for idx in range(len(u.trajectory)):
+                string = f"{idx}\t{eps_ch[idx]:.08f}\t{eps_p[idx]:.08f}\t{cylx[idx]:.08f}\t{cylx[idx]:.08f}"
+                string += f"\t{d1[idx]:.08f}\t{d2[idx]:.08f}\t{d3[idx]:.08f}"
+                string += f"\t{d12[idx]:.08f}\t{d123[idx]:.08f}"
+                string += f"\t{dph[idx]:.08f}\t{symff[idx]:.08f}\n"
+                write.write(string)
