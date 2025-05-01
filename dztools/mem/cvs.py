@@ -1983,9 +1983,11 @@ def mem_pfcvs(
     import matplotlib.pyplot as plt
     import numpy as np
     import MDAnalysis as mda
+    from MDAnalysis.analysis.distances import distance_array
 
     # load top and xtc into MDA
     u = mda.Universe(top, xtc)
+    print("um", len(u.trajectory), xtc)
 
     lipid = u.select_atoms(f"{lip}")
     lipid_p = u.select_atoms(f"name P")
@@ -1997,6 +1999,9 @@ def mem_pfcvs(
     d1, d2, d3 = [], [], []
     d12, d123 = [], []
     dph, symff = [], []
+    ff3_1 = []
+    ff3_2 = []
+    ff3_12 = []
 
     lip_z = lipid_p.atoms.positions[:, 2]
     z_idxes0 = np.argsort(lip_z)[:64]
@@ -2028,12 +2033,35 @@ def mem_pfcvs(
 
         symff.append(64 - len([i for i in z_idxes if i in z_idxes0]))
 
+        lip_xyz = lipid_p.atoms.positions
+        lipnum = len(z_idxes)
+        idx_up = z_idxes[:lipnum//2]
+        idx_dw = z_idxes[lipnum//2:]
+        dists = distance_array(lip_xyz[idx_up], lip_xyz[idx_dw], box=ts.dimensions)
+        indices = np.dstack(np.unravel_index(np.arange(dists.size), dists.shape))[0]
+        values = dists.flatten()
+        sorted_pairs = sorted(zip(values, indices), key=lambda x: x[0])
+
+        fdw, fup, ffds = [], [], []
+        N = 3
+        for val, (x, y) in sorted_pairs:
+            if idx_up[x] not in fup and idx_dw[y] not in fdw:
+                fup.append(idx_up[x])
+                fdw.append(idx_dw[y])
+                ffds.append(val)
+            if len(ffds) >= 3:
+                break
+        ff3_1.append(np.abs(lip_z[fdw[0]] - lip_z[fup[0]]))
+        ff3_2.append(np.abs(lip_z[fdw[1]] - lip_z[fup[1]]))
+        ff3_12.append(ff3_1[-1] + ff3_2[-1])
+
 
     if out:
         with open(out, 'w') as write:
             for idx in range(len(u.trajectory)):
-                string = f"{idx}\t{eps_ch[idx]:.08f}\t{eps_p[idx]:.08f}\t{cylx[idx]:.08f}\t{cylx[idx]:.08f}"
-                string += f"\t{d1[idx]:.08f}\t{d2[idx]:.08f}\t{d3[idx]:.08f}"
-                string += f"\t{d12[idx]:.08f}\t{d123[idx]:.08f}"
-                string += f"\t{dph[idx]:.08f}\t{symff[idx]:.08f}\n"
+                string = f"{idx}\t{eps_ch[idx]:.08f}\t{eps_p[idx]:.08f}\t{cylx[idx]:.08f}\t{cylx[idx]:.08f}"   # 0 1 2 3 4
+                string += f"\t{d1[idx]:.08f}\t{d2[idx]:.08f}\t{d3[idx]:.08f}"                                  # 5 6 7
+                string += f"\t{d12[idx]:.08f}\t{d123[idx]:.08f}"                                               # 8 9
+                string += f"\t{dph[idx]:.08f}\t{symff[idx]:.08f}"                                              # 10 11
+                string += f"\t{ff3_1[idx]:.08f}\t{ff3_2[idx]:.08f}\t{ff3_12[idx]:.08f}\n"                      # 12 13 14
                 write.write(string)
