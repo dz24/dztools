@@ -2170,12 +2170,12 @@ def mem_thin(
 
         lavg = np.average(dzs)
         mint.append(lavg*np.average(coms)*(2/np.pi))
-        if mint[-1] > 34:
-            print("what", mint[-1])
-            print(lavg*np.average(coms)*(2/np.pi))
-            print(dzs)
-            print(np.array(coms)*(180/np.pi))
-            exit()
+        # if mint[-1] > 34:
+        #     print("what", mint[-1])
+        #     print(lavg*np.average(coms)*(2/np.pi))
+        #     print(dzs)
+        #     print(np.array(coms)*(180/np.pi))
+        #     exit()
 
         # print(idx, totlen, mint[-1])
 
