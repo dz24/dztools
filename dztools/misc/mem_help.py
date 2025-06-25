@@ -178,6 +178,7 @@ def calc_chain(
     rr = np.sqrt((npr*v0)/(np.pi*d0))
 
     epsilon_e = epsilon + heavys(np.array([epsilon - ep0]), 0.05)*((rr-r0)/r0)
+    # print(epsilon, epsilon_e, heavys(np.array([epsilon - ep0]), 0.05)*((rr-r0)/r0))
 
     return epsilon, epsilon_e[0], x_cyl, y_cyl, nsp
 
@@ -212,3 +213,184 @@ def periodic_com(pos, box):
     com_x = pcom_axis(pos[:, 0], box[0])
     com_y = pcom_axis(pos[:, 1], box[1])
     return com_x, com_y
+
+
+def calc_thin(
+    u,
+    hoxy = "OH2 O11 O12 O13 O14",
+    lip= "resname POPC",
+    coord_n = 26,
+    coord_d = 1.0,
+    coord_r = 8.0,
+    coord_z = 0.75,
+    padding = 0.5,
+    coord_h = 0.25,
+    r0 = 4.05,
+    d0 = 10.0,
+    v0 = 29.96,
+    ep0 = 0.925,
+    lmt_n = 12,
+    lmt_k = 30,
+):
+    from MDAnalysis.analysis.distances import distance_array
+    from MDAnalysis.lib.distances import calc_angles
+    import numpy as np
+
+    epsilon, epsilon_e, x0, y0, _ = calc_chain(u, lip=lip, coord_r = coord_r, coord_n=coord_n, hoxy=hoxy, coord_d=coord_d, coord_z=coord_z)
+
+    lipid = u.select_atoms(f"{lip}")
+    lipid_p = u.select_atoms(f"name P")
+    if len(lipid_p.atoms) == 0:
+        lipid_p = u.select_atoms(f"name PH")
+
+
+    xyz = lipid_p.atoms.positions
+    zavg = np.average(xyz[:, 2])
+    radial = distance_array(np.array([x0, y0, 0]),
+                            xyz*np.array([1, 1, 0]),
+                            box = u.dimensions)[0]
+
+    ups, dws = [], []           # group idxes
+    ups_c, dws_c = [], []       # angles
+    for i in np.argsort(radial):
+        at = lipid_p.atoms[i]
+        resid = u.select_atoms(f"resid {at.resid}")
+        com = resid.center_of_mass(unwrap=True)
+        coords3 = np.array([xyz[i, 0], xyz[i, 1], com[2]])
+        ang = calc_angles(xyz[i], com, coords3, box=u.dimensions)
+        if xyz[i, 2] > zavg:
+            ups.append(i)
+            ups_c.append(ang)
+        else:
+            dws.append(i)
+            dws_c.append(ang)
+        if len(ups) >= 1 and len(dws) >= 1 and len(ups) + len(dws) >= lmt_n:
+            break
+    radial1 = radial[i]
+
+    # get their positions, and get their pair stuff
+    ups_pos = xyz[ups]
+    dws_pos = xyz[dws]
+
+    ip = np.array([(i, j) for i in range(len(ups)) for j in range(len(dws))]).T
+    pdist = distance_array(ups_pos, dws_pos, box = u.dimensions * [1,1,10,1,1,1])
+    dzs = []
+    coms = []
+
+    # sorted pdist indxes
+    ind = np.unravel_index(np.argsort(pdist, axis=None), pdist.shape)
+    for cnt, (i, j) in enumerate(zip(ind[0], ind[1])):
+        dzs.append(ups_pos[i, 2] - dws_pos[j, 2])
+        coms.append((ups_c[i] + dws_c[j])/2)
+        if cnt > lmt_k:
+            break
+
+    lavg = np.average(dzs)
+    d_lmt = lavg*np.average(coms)*(2/np.pi)
+    return epsilon, epsilon_e, x0, y0, d_lmt
+
+
+def calc_thin2(
+    u,
+    hoxy = "OH2 O11 O12 O13 O14",
+    lip= "resname POPC",
+    coord_n = 26,
+    coord_d = 1.0,
+    coord_r = 8.0,
+    coord_z = 0.75,
+    padding = 0.5,
+    coord_h = 0.25,
+    r0 = 4.05,
+    d0 = 10.0,
+    v0 = 29.96,
+    ep0 = 0.925,
+    lmt_n = 12,
+    lmt_k = 30,
+):
+    from MDAnalysis.analysis.distances import distance_array
+    from MDAnalysis.lib.distances import calc_angles
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import scipy
+    from scipy.interpolate import make_smoothing_spline
+
+    epsilon, epsilon_e, x0, y0, _ = calc_chain(u, lip=lip, coord_r = coord_r, coord_n=coord_n, hoxy=hoxy, coord_d=coord_d, coord_z=coord_z)
+
+    lipid = u.select_atoms(f"{lip}")
+    lipid_p = u.select_atoms(f"name P")
+    if len(lipid_p.atoms) == 0:
+        lipid_p = u.select_atoms(f"name PH")
+
+
+    xyz = lipid_p.atoms.positions
+    zavg = np.average(xyz[:, 2])
+    radial = distance_array(np.array([x0, y0, 0]),
+                            xyz*np.array([1, 1, 0]),
+                            box = u.dimensions)[0]
+
+    ups, dws = [], []           # group idxes
+    ups_c, dws_c = [], []       # angles
+    for i in np.argsort(radial):
+        resid = u.select_atoms(f"resid {i+1}")
+        com = resid.center_of_mass(unwrap=True)
+        coords3 = np.array([xyz[i, 0], xyz[i, 1], com[2]])
+        ang = calc_angles(xyz[i], com, coords3, box=u.dimensions)
+        if xyz[i, 2] > zavg:
+            ups.append(i)
+            ups_c.append(ang)
+        else:
+            dws.append(i)
+            dws_c.append(ang)
+        if len(ups) >= 1 and len(dws) >= 1 and len(ups) + len(dws) >= lmt_n:
+            break
+    radial1 = radial[i]
+
+    # get their positions, and get their pair stuff
+    ups_pos = xyz[ups]
+    dws_pos = xyz[dws]
+    ip = np.array([(i, j) for i in range(len(ups)) for j in range(len(dws))]).T
+    pdist = distance_array(ups_pos, dws_pos, box = u.dimensions * [1,1,10,1,1,1])
+    dzs = []
+    coms = []
+
+    # sorted pdist indxes
+    # print(np.arange(len(pdist)))
+    # print(pdist.flatten())
+    # plt.scatter(np.arange(len(pdist.flatten())), sorted(pdist.flatten()))
+    y = np.sort(pdist.flatten())/np.max(pdist)
+    x = np.arange(len(y))
+    # fn = make_smoothing_spline(x[::3], y[::3], lam=None)
+    # x0, y0 = [], []
+    # y0 = np.interp(
+    coef = np.polyfit(x, y, 20)
+    fn = np.poly1d(coef)
+    # plt.plot(x, y)
+    # plt.plot(x, fn(x))
+
+#     grad = np.gradient(sorted(pdist.flatten())[::10])
+    grad = np.gradient(fn(x))
+    # plt.plot(np.arange(len(pdist.flatten())), sorted(pdist.flatten())/np.max(pdist))
+    ig = np.trapz(grad[:1000])
+    print("ig", ig)
+    # plt.plot(x, grad)
+    return ig
+
+    # print(len(pdist[0]))
+    # plt.show()
+    ind = np.unravel_index(np.argsort(pdist, axis=None), pdist.shape)
+    for cnt, (i, j) in enumerate(zip(ind[0], ind[1])):
+        dzs.append(ups_pos[i, 2] - dws_pos[j, 2])
+        coms.append((ups_c[i] + dws_c[j])/2)
+        if cnt > lmt_k:
+            break
+    # print(dzs)
+    # exit()
+    min0 = np.min(np.array(dzs)*np.array(coms))
+    y = np.sort(np.array(dzs)*np.array(coms))
+    # plt.plot(np.arange(len(dzs)), y)
+    # plt.show()
+    print(len(pdist[0]))
+
+    lavg = np.average(dzs)
+    d_lmt = lavg*np.average(coms)*(2/np.pi)
+    return epsilon, epsilon_e, x0, y0, d_lmt

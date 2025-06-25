@@ -125,6 +125,7 @@ def mem_chain(
 
     lipid = u.select_atoms(f"{lip}")
     epsilons = []
+    epsilons_p = []
     tpi = 2 * np.pi
 
     totlen = len(u.trajectory)
@@ -132,7 +133,7 @@ def mem_chain(
     for idx, ts in enumerate(u.trajectory):
         # Frame properties
         box.append(ts.dimensions[:3].copy())
-        epsilon, _, x0, y0, _ = calc_chain(
+        epsilon, epsilon_p, x0, y0, _ = calc_chain(
             u,
             lip=lip,
             hoxy=hoxy,
@@ -141,6 +142,7 @@ def mem_chain(
             coord_z=coord_z,
             coord_h=coord_h)
         epsilons.append(epsilon)
+        epsilons_p.append(epsilon_p)
         x.append(x0)
         y.append(y0)
 
@@ -154,7 +156,7 @@ def mem_chain(
             for idx, cv in zip(np.arange(len(epsilons)), epsilons):
                 # write.write(f"{idx}\t{cv:.08f}\n")
                 towrite = f"{idx}\t{cv:.08f}\t{x[idx]:.08f}\t{y[idx]:.08f}\t{box[idx][0]:.08f}"
-                towrite += f"\t{box[idx][2]:.08f}"
+                towrite += f"\t{box[idx][2]:.08f}\t{epsilons_p[idx]:.08f}"
                 towrite += "\n"
                 write.write(towrite)
 
@@ -2011,6 +2013,12 @@ def mem_pfcvs(
     lip_z = lipid_p.atoms.positions[:, 2]
     z_idxes0 = np.argsort(lip_z)[:64]
 
+    coms1 = []
+    coms2 = []
+    coms3 = []
+    coms12 = []
+    coms123 = []
+
     for idx, ts in enumerate(u.trajectory):
         # Frame properties
         epsilon, epsilon_e, x0, y0, _ = calc_chain(u, lip=lip, coord_r = coord_r, coord_n=coord_n)
@@ -2036,7 +2044,7 @@ def mem_pfcvs(
         d123.append(dz_list[0] + dz_list[1] + dz_list[2])
         dph.append(np.min(np.abs(lip_z - z_mem)))
 
-        symff.append(64 - len([i for i in z_idxes if i in z_idxes0]))
+        symff.append(64 - len([i for i in z_idxes[:64] if i in z_idxes0]))
 
         lip_xyz = lipid_p.atoms.positions
         lipnum = len(z_idxes)
@@ -2068,16 +2076,37 @@ def mem_pfcvs(
         ff3_1234.append(ff3_1[-1] + ff3_2[-1] + ff3_3[-1] + ff3_4[-1])
         ff3_12345.append(ff3_1[-1] + ff3_2[-1] + ff3_3[-1] + ff3_4[-1] + ff3_5[-1])
 
+        # print("f", fdw, fup)
+        resid1d = u.select_atoms(f"resid {fdw[0]+1}").center_of_mass(unwrap=True)
+        resid1u = u.select_atoms(f"resid {fup[0]+1}").center_of_mass(unwrap=True)
+        resid2d = u.select_atoms(f"resid {fdw[1]+1}").center_of_mass(unwrap=True)
+        resid2u = u.select_atoms(f"resid {fup[1]+1}").center_of_mass(unwrap=True)
+        resid3d = u.select_atoms(f"resid {fdw[2]+1}").center_of_mass(unwrap=True)
+        resid3u = u.select_atoms(f"resid {fup[2]+1}").center_of_mass(unwrap=True)
+
+        # print("bonk a", resid1d, lip_z[fdw[0]])
+        # print("bonk b", resid1u, lip_z[fup[0]])
+        coms1.append(np.abs(resid1d[2] - resid1u[2]))
+        # print(resid1d[2], resid1u[2])
+        # print(coms1[-1], ff3_1[-1])
+        # print("mouse")
+        # exit()
+        coms2.append(np.abs(resid2d[2] - resid2u[2]))
+        coms3.append(np.abs(resid3d[2] - resid3u[2]))
+        coms12.append(coms1[-1] + coms2[-1])
+        coms123.append(coms1[-1] + coms2[-1] + coms3[-1])
+
 
     if out:
         with open(out, 'w') as write:
             for idx in range(len(u.trajectory)):
-                string = f"{idx}\t{eps_ch[idx]:.08f}\t{eps_p[idx]:.08f}\t{cylx[idx]:.08f}\t{cylx[idx]:.08f}"                    # 0 1 2 3 4
-                string += f"\t{d1[idx]:.08f}\t{d2[idx]:.08f}\t{d3[idx]:.08f}"                                                   # 5 6 7
-                string += f"\t{d12[idx]:.08f}\t{d123[idx]:.08f}"                                                                # 8 9
-                string += f"\t{dph[idx]:.08f}\t{symff[idx]:.08f}"                                                               # 10 11
-                string += f"\t{ff3_1[idx]:.08f}\t{ff3_2[idx]:.08f}\t{ff3_3[idx]:.08f}\t{ff3_4[idx]:.08f}\t{ff3_5[idx]:.08f}"    # 12 13 14 15 16
-                string += f"\t{ff3_12[idx]:.08f}\t{ff3_123[idx]:.08f}\t{ff3_1234[idx]:.08f}\t{ff3_12345[idx]:.08f}\n"           # 17 18 19
+                string = f"{idx}\t{eps_ch[idx]:.08f}\t{eps_p[idx]:.08f}\t{cylx[idx]:.08f}\t{cylx[idx]:.08f}"                        # 0 1 2 3 4
+                string += f"\t{d1[idx]:.08f}\t{d2[idx]:.08f}\t{d3[idx]:.08f}"                                                       # 5 6 7
+                string += f"\t{d12[idx]:.08f}\t{d123[idx]:.08f}"                                                                    # 8 9
+                string += f"\t{dph[idx]:.08f}\t{symff[idx]:.08f}"                                                                   # 10 11
+                string += f"\t{ff3_1[idx]:.08f}\t{ff3_2[idx]:.08f}\t{ff3_3[idx]:.08f}\t{ff3_4[idx]:.08f}\t{ff3_5[idx]:.08f}"        # 12 13 14 15 16
+                string += f"\t{ff3_12[idx]:.08f}\t{ff3_123[idx]:.08f}\t{ff3_1234[idx]:.08f}\t{ff3_12345[idx]:.08f}"                 # 17 18 19 20
+                string += f"\t{coms1[idx]:.08f}\t{coms2[idx]:.08f}\t{coms3[idx]:.08f}\t{coms12[idx]:.08f}\t{coms123[idx]:.08f}\n"   # 21 22 23 24 25
                 write.write(string)
 
 
@@ -2094,12 +2123,14 @@ def mem_thin(
     coord_z: Annotated[float, typer.Option("-coord_z")] = 0.75,
     padding: Annotated[float, typer.Option("-padding")] = 0.5,
     coord_h: Annotated[float, typer.Option("-coord_h")] = 0.25,
+    lmt_n: Annotated[int, typer.Option("-lmt_n")] = 12,
+    lmt_k: Annotated[int, typer.Option("-lmt_k")] = 30,
     plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
     out: Annotated[str, typer.Option("-out", help="string")] = "",
 ):
     """Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
 
-    from dztools.misc.mem_help import calc_chain
+    from dztools.misc.mem_help import calc_chain, calc_thin
     import matplotlib.pyplot as plt
     import numpy as np
     import MDAnalysis as mda
@@ -2117,73 +2148,116 @@ def mem_thin(
 
     totlen = len(u.trajectory)
     eps_ch, eps_p = [], []
+    eps_ch2, eps_p2 = [], []
     mint = []
+    track = []
 
     lip_z = lipid_p.atoms.positions[:, 2]
     z_idxes0 = np.argsort(lip_z)[:64]
 
     for idx, ts in enumerate(u.trajectory):
-        # Frame properties
-        epsilon, epsilon_e, x0, y0, _ = calc_chain(u, lip=lip, coord_r = coord_r, coord_n=coord_n, hoxy=hoxy, coord_d=coord_d, coord_z=coord_z)
+        epsilon, epsilon_e, x0, y0, dlmt = calc_thin(u,
+                                                     lip=lip,
+                                                     coord_r = coord_r,
+                                                     coord_n=coord_n,
+                                                     hoxy=hoxy,
+                                                     coord_d=coord_d,
+                                                     coord_z=coord_z,
+                                                     lmt_n=lmt_n,
+                                                     lmt_k=lmt_k,)
+
+        epsilon2, epsilon_e2, _, _, _ = calc_chain(u,
+                                                   lip=lip,
+                                                   coord_r = coord_r,
+                                                   coord_n=coord_n,
+                                                   hoxy="OH2",
+                                                   coord_d=coord_d,
+                                                   coord_z=coord_z)
         eps_ch.append(epsilon)
         eps_p.append(epsilon_e)
+        eps_ch2.append(epsilon2)
+        eps_p2.append(epsilon_e2)
+        mint.append(dlmt)
 
-        xyz = lipid_p.atoms.positions
-        zavg = np.average(xyz[:, 2])
-        radial = distance_array(np.array([x0, y0, 0]),
-                                xyz*np.array([1, 1, 0]),
-                                box = ts.dimensions)[0]
+        zcom = lipid.center_of_mass()[2]
+        p_z = lipid_p.atoms.positions[:, 2]
+        p_zu = p_z > zcom
+        track.append(np.abs(64-np.sum(p_zu)))
 
-        ups, dws = [], []           # group idxes
-        ups_c, dws_c = [], []       # angles
-        for i in np.argsort(radial):
-            resid = u.select_atoms(f"resid {i+1}")
-            com = resid.center_of_mass(unwrap=True)
-            coords3 = np.array([xyz[i, 0], xyz[i, 1], com[2]])
-            ang = calc_angles(xyz[i], com, coords3, box=ts.dimensions)
-            if xyz[i, 2] > zavg:
-                ups.append(i)
-                ups_c.append(ang)
-            else:
-                dws.append(i)
-                dws_c.append(ang)
-            if len(ups) >= 1 and len(dws) >= 1 and len(ups) + len(dws) == 12:
-                break
-        radial1 = radial[i]
-
-        # get their positions, and get their pair stuff
-        ups_pos = xyz[ups]
-        dws_pos = xyz[dws]
-        ip = np.array([(i, j) for i in range(len(ups)) for j in range(len(dws))]).T
-        pdist = distance_array(ups_pos, dws_pos, box = ts.dimensions * [1,1,10,1,1,1])
-        dzs = []
-        coms = []
-
-        # sorted pdist indxes
-        ind = np.unravel_index(np.argsort(pdist, axis=None), pdist.shape)
-        for cnt, (i, j) in enumerate(zip(ind[0], ind[1])):
-            dzs.append(ups_pos[i, 2] - dws_pos[j, 2])
-            coms.append((ups_c[i] + dws_c[j])/2)
-            if cnt > 30:
-                break
-
-
-        lavg = np.average(dzs)
-        mint.append(lavg*np.average(coms)*(2/np.pi))
-        # if mint[-1] > 34:
-        #     print("what", mint[-1])
-        #     print(lavg*np.average(coms)*(2/np.pi))
-        #     print(dzs)
-        #     print(np.array(coms)*(180/np.pi))
-        #     exit()
-
-        # print(idx, totlen, mint[-1])
-
-    # print(f"{eps_p[0]:.02f}-{mint[0]:.02f}", eps_ch, eps_p, mint)
     if out:
         with open(out, 'w') as write:
-            print("len", len(u.trajectory), len(eps_ch))
-            for idx in range(len(u.trajectory)):
+            min0 = np.min([len(u.trajectory), len(eps_ch)])
+            for idx in range(min0):
                 string = f"{idx}\t{eps_ch[idx]:.08f}\t{eps_p[idx]:.08f}"                    # 0 1 2 3 4
-                string += f"\t{mint[idx]:.08f}\n"                                                   # 5 6 7
+                string += f"\t{mint[idx]:.08f}"                                                   # 5 6 7
+                string += f"\t{eps_ch2[idx]:.08f}\t{eps_p2[idx]:.08f}"                    # 0 1 2 3 4
+                string += f"\t{track[idx]:.08f}\n"                                                   # 5 6 7
+                write.write(string)
+
+
+def mem_void(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    rad: Annotated[float, typer.Option("-coord_z")] = 6.00,
+    samples: Annotated[int, typer.Option("-coord_z")] = 100,
+    # lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "resname DMPC",
+    out: Annotated[str, typer.Option("-out", help="string")] = "",
+):
+    """stick ball"""
+
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import MDAnalysis as mda
+    from MDAnalysis.analysis.distances import distance_array
+    from MDAnalysis.lib.pkdtree import PeriodicKDTree
+
+    # load top and xtc into MDA
+    u = mda.Universe(top, xtc)
+
+    lipid_p = u.select_atoms(f"name P")
+    if len(lipid_p.atoms) == 0:
+        lipid_p = u.select_atoms(f"name PH")
+    tpi = 2 * np.pi
+
+    totlen = len(u.trajectory)
+
+    cnts_k = []
+    cnts_ku = []
+    cnts_kl = []
+    for idx, ts in enumerate(u.trajectory):
+        # get standard info from frame
+        pos = lipid_p.atoms.positions
+        boxx = ts.dimensions[0]
+        zavg = np.average(pos[:, 2])
+        upper = lipid_p.select_atoms(f"prop z > {zavg}")
+        lower = lipid_p.select_atoms(f"prop z <= {zavg}")
+
+        # project P into x, y
+        pos_u = np.copy(upper.atoms.positions * [1, 1, 0])
+        pos_l = np.copy(lower.atoms.positions * [1, 1, 0])
+
+        # create 2D xy dotted grid
+        xlim = np.linspace(0, boxx, samples)
+        X, Y = np.meshgrid(xlim, xlim)  # Create 2D grids
+        all_indices = np.arange(len(X.flatten()))
+        w = np.array([X.flatten(), Y.flatten(), np.zeros(samples**2)]).T
+
+        cnts = []
+
+        for pos0 in [pos_u, pos_l]:
+            tree = PeriodicKDTree(box=ts.dimensions)
+            tree.set_coords(pos0, cutoff=40) # pbc cutoff or something
+            dots = tree.search_tree(w, radius=rad)
+            idxes = np.setdiff1d(all_indices, dots[:, 0])
+            cnts.append(len(X.flatten()[idxes]))
+        cnts_k.append(np.average(cnts))
+        cnts_ku.append(cnts[0])
+        cnts_kl.append(cnts[1])
+        print(idx, totlen, cnts_k[-1])
+
+    if out:
+        with open(out, 'w') as write:
+            # min0 = np.min([len(u.trajectory), len(eps_ch)])
+            for idx in range(len(cnts_k)):
+                string = f"{idx}\t{cnts_k[idx]:.08f}\t{cnts_ku[idx]:.08f}\t{cnts_kl[idx]:.08f}\n"
                 write.write(string)
