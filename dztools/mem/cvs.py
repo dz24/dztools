@@ -12,10 +12,11 @@ def mem_helicity(
 ):
     """DSSP"""
 
-    from dztools.misc.mem_help import calc_helicity
     import matplotlib.pyplot as plt
-    import numpy as np
     import MDAnalysis as mda
+    import numpy as np
+
+    from dztools.misc.mem_help import calc_helicity
 
     # load gro and xtc into MDA
     u = mda.Universe(top, xtc, dt=100)
@@ -59,20 +60,21 @@ def mem_chain(
 ):
     """Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
 
-    from dztools.misc.mem_help import calc_chain
     import matplotlib.pyplot as plt
-    import numpy as np
     import MDAnalysis as mda
+    import numpy as np
+
+    from dztools.misc.mem_help import calc_chain
 
     # load top and xtc into MDA
     u = mda.Universe(top, xtc)
 
-    lipid = u.select_atoms(f"{lip}")
+    u.select_atoms(f"{lip}")
     epsilons = []
     epsilons_p = []
-    tpi = 2 * np.pi
+    2 * np.pi
 
-    totlen = len(u.trajectory)
+    len(u.trajectory)
     x, y, box = [], [], []
     for idx, ts in enumerate(u.trajectory):
         # Frame properties
@@ -125,20 +127,20 @@ def mem_pfcvs(
 ):
     """Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
 
-    from dztools.misc.mem_help import calc_chain
-    import matplotlib.pyplot as plt
-    import numpy as np
     import MDAnalysis as mda
+    import numpy as np
     from MDAnalysis.analysis.distances import distance_array
+
+    from dztools.misc.mem_help import calc_chain
 
     # load top and xtc into MDA
     u = mda.Universe(top, xtc)
 
     lipid = u.select_atoms(f"{lip}")
-    lipid_p = u.select_atoms(f"name P")
-    tpi = 2 * np.pi
+    lipid_p = u.select_atoms("name P")
+    2 * np.pi
 
-    totlen = len(u.trajectory)
+    len(u.trajectory)
     eps_ch, eps_p = [], []
     cylx, cyly = [], []
     d1, d2, d3 = [], [], []
@@ -267,30 +269,28 @@ def mem_thin(
 ):
     """Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
 
-    from dztools.misc.mem_help import calc_chain, calc_thin
-    import matplotlib.pyplot as plt
-    import numpy as np
     import MDAnalysis as mda
-    from MDAnalysis.analysis.distances import distance_array
-    from MDAnalysis.lib.distances import calc_angles
+    import numpy as np
+
+    from dztools.misc.mem_help import calc_chain, calc_thin
 
     # load top and xtc into MDA
     u = mda.Universe(top, xtc)
 
     lipid = u.select_atoms(f"{lip}")
-    lipid_p = u.select_atoms(f"name P")
+    lipid_p = u.select_atoms("name P")
     if len(lipid_p.atoms) == 0:
-        lipid_p = u.select_atoms(f"name PH")
-    tpi = 2 * np.pi
+        lipid_p = u.select_atoms("name PH")
+    2 * np.pi
 
-    totlen = len(u.trajectory)
+    len(u.trajectory)
     eps_ch, eps_p = [], []
     eps_ch2, eps_p2 = [], []
     mint = []
     track = []
 
     lip_z = lipid_p.atoms.positions[:, 2]
-    z_idxes0 = np.argsort(lip_z)[:64]
+    np.argsort(lip_z)[:64]
 
     for idx, ts in enumerate(u.trajectory):
         epsilon, epsilon_e, x0, y0, dlmt = calc_thin(u,
@@ -342,19 +342,17 @@ def mem_void(
 ):
     """stick ball"""
 
-    import matplotlib.pyplot as plt
-    import numpy as np
     import MDAnalysis as mda
-    from MDAnalysis.analysis.distances import distance_array
+    import numpy as np
     from MDAnalysis.lib.pkdtree import PeriodicKDTree
 
     # load top and xtc into MDA
     u = mda.Universe(top, xtc)
 
-    lipid_p = u.select_atoms(f"name P")
+    lipid_p = u.select_atoms("name P")
     if len(lipid_p.atoms) == 0:
-        lipid_p = u.select_atoms(f"name PH")
-    tpi = 2 * np.pi
+        lipid_p = u.select_atoms("name PH")
+    2 * np.pi
 
     totlen = len(u.trajectory)
 
