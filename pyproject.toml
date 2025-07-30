@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dztools"
-version = "0.0.1"
+version = "1.0.0"
 description = "Useful tools for dz"
 authors = [
     "Daniel Zhang <daniel.t.zhang@ntnu.no>",
