@@ -12,7 +12,7 @@ Work in progress python CLI for personal usage.
 Or without cloning,
 
    ```bash
-   pip install git+https://github.com/dz24/dztools.git
+   pip install git+https://github.com/dz24/dztools.git@v1.0.0
    ```
 
 ## Usage
