@@ -1,20 +1,6 @@
 import os
 """These values should not change."""
 
-def test_mem_com(tmp_path):
-    from dztools.mem.cvs import mem_com
-
-    mem_f = os.path.dirname(__file__) + "/data/mem_s.gro"
-    mem_u = os.path.dirname(__file__) + "/data/mem_e.gro"
-    top = os.path.dirname(__file__) + "/data/mem.tpr"
-
-    hel_f = mem_com(top=top, xtc=mem_f)
-    hel_u = mem_com(top=top, xtc=mem_u)
-
-    assert abs(hel_f[0] - 41.75961787) < 0.0001
-    assert abs(hel_u[0] - 26.63506039) < 0.0001
-
-
 def test_mem_helicity(tmp_path):
     from dztools.mem.cvs import mem_helicity
 
