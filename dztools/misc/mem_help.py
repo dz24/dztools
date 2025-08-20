@@ -272,6 +272,9 @@ def calc_thin(
     ups_pos = xyz[ups]
     dws_pos = xyz[dws]
 
+    # standard average
+    stdavg = np.average(ups_pos[:, 2]) - np.average(dws_pos[:, 2])
+
     ip = np.array([(i, j) for i in range(len(ups)) for j in range(len(dws))]).T
     pdist = distance_array(ups_pos, dws_pos, box = u.dimensions * [1,1,10,1,1,1])
     dzs = []
@@ -286,8 +289,9 @@ def calc_thin(
             break
 
     lavg = np.average(dzs)
+    # print(f"{np.abs(stdavg- lavg):.04f}", stdavg, lavg)
     d_lmt = lavg*np.average(coms)*(2/np.pi)
-    return epsilon, epsilon_e, x0, y0, d_lmt
+    return epsilon, epsilon_e, x0, y0, d_lmt, lavg, stdavg
 
 
 def calc_thin2(

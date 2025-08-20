@@ -288,33 +288,37 @@ def mem_thin(
     eps_ch2, eps_p2 = [], []
     mint = []
     track = []
+    lavgs = []
+    stdavgs = []
 
     lip_z = lipid_p.atoms.positions[:, 2]
     np.argsort(lip_z)[:64]
 
     for idx, ts in enumerate(u.trajectory):
-        epsilon, epsilon_e, x0, y0, dlmt = calc_thin(u,
-                                                     lip=lip,
-                                                     coord_r = coord_r,
-                                                     coord_n=coord_n,
-                                                     hoxy=hoxy,
-                                                     coord_d=coord_d,
-                                                     coord_z=coord_z,
-                                                     lmt_n=lmt_n,
-                                                     lmt_k=lmt_k,)
+        epsilon, epsilon_e, x0, y0, dlmt, lavg, stdavg = calc_thin(u,
+                                                                    lip=lip,
+                                                                    coord_r = coord_r,
+                                                                    coord_n=coord_n,
+                                                                    hoxy=hoxy,
+                                                                    coord_d=coord_d,
+                                                                    coord_z=coord_z,
+                                                                    lmt_n=lmt_n,
+                                                                    lmt_k=lmt_k,)
 
-        epsilon2, epsilon_e2, _, _, _ = calc_chain(u,
-                                                   lip=lip,
-                                                   coord_r = coord_r,
-                                                   coord_n=coord_n,
-                                                   hoxy="OH2",
-                                                   coord_d=coord_d,
-                                                   coord_z=coord_z)
+        # epsilon2, epsilon_e2, _, _, _ = calc_chain(u,
+        #                                            lip=lip,
+        #                                            coord_r = coord_r,
+        #                                            coord_n=coord_n,
+        #                                            hoxy="OH2",
+        #                                            coord_d=coord_d,
+        #                                            coord_z=coord_z)
         eps_ch.append(epsilon)
         eps_p.append(epsilon_e)
-        eps_ch2.append(epsilon2)
-        eps_p2.append(epsilon_e2)
+        # eps_ch2.append(epsilon2)
+        # eps_p2.append(epsilon_e2)
         mint.append(dlmt)
+        lavgs.append(lavg)
+        stdavgs.append(stdavg)
 
         zcom = lipid.center_of_mass()[2]
         p_z = lipid_p.atoms.positions[:, 2]
@@ -327,8 +331,8 @@ def mem_thin(
             for idx in range(min0):
                 string = f"{idx}\t{eps_ch[idx]:.08f}\t{eps_p[idx]:.08f}"                    # 0 1 2 3 4
                 string += f"\t{mint[idx]:.08f}"                                                   # 5 6 7
-                string += f"\t{eps_ch2[idx]:.08f}\t{eps_p2[idx]:.08f}"                    # 0 1 2 3 4
-                string += f"\t{track[idx]:.08f}\n"                                                   # 5 6 7
+                # string += f"\t{eps_ch2[idx]:.08f}\t{eps_p2[idx]:.08f}"                    # 0 1 2 3 4
+                string += f"\t{track[idx]:.08f}\t{lavgs[idx]:.08f}\t{stdavgs[idx]:.08f}\n"                     # 5 6 7
                 write.write(string)
 
 
