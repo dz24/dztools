@@ -57,3 +57,45 @@ def calc_ruop(orig, homos):
     # calculate ru_op
     ru_op = (dist1 - dist2)/ru_dist
     return ru_op, x_idx, status
+
+
+def calc_hop(orig):
+    """"""
+    at_r = orig.select_atoms("name Ru")
+    at_o = orig.select_atoms("name O")
+    at_h = orig.select_atoms("name H")
+    oh_dists = distance_array(at_o, at_h, box=BOX)
+    
+    # get shortest o-h-o difference, min == 1
+    sort =  np.sort(oh_dists, axis=0)
+    oho_list = sort[1, :]/sort[0, :]
+
+    # find hydrogen index
+    nearest_idxs = np.argmin(oh_dists, axis=0)
+    at_exes = {i: [] for i in range(len(at_o))}
+    count = np.zeros(len(at_o))
+    for h_idx, o_idx in enumerate(nearest_idxs):
+        at_exes[o_idx].append(oh_dists[o_idx, h_idx])
+        count[o_idx] += 1
+    
+    assert 1 in count
+
+    # get h_idx and o_idx based on the complete atom list
+    o_idx = np.argmin(count)
+    h_idx = np.where(at_exes[o_idx][0] == oh_dists)[1][0]
+    o_idx = at_o[o_idx].index
+    h_idx = at_h[h_idx].index
+
+    # calculate ru-h-ru
+    rh_dists = distance_array(at_r, orig.select_atoms(f"index {h_idx}"), box=BOX)
+    hop = rh_dists[1][0] - rh_dists[0][0]
+
+    # calculate solvation shell
+    ro_dists = distance_array(at_r, at_o, box=BOX)
+    sort = np.sort(ro_dists, axis=1)
+    solv1 = np.average(sort[0][:6])
+    solv2 = np.average(sort[1][:6])
+
+    return hop, h_idx, o_idx, np.sort(oho_list)[0], solv1, solv2
+
+
