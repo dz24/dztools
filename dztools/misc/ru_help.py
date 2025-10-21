@@ -18,8 +18,8 @@ def get_frame(xyz, traj):
     for frame in traj.trajectory[::-1]:
         delta = np.sum(np.abs(xyz[0] - frame.positions[0]))
         if delta < 10e-5:
-            return traj.select_atoms("name X").positions
-    assert False, "did not find correct frame!"
+            return True, traj.select_atoms("name X").positions
+    return False, "did not find correct frame!"
 
 
 def calc_ruop(orig, homos):
@@ -65,7 +65,7 @@ def calc_hop(orig):
     at_o = orig.select_atoms("name O")
     at_h = orig.select_atoms("name H")
     oh_dists = distance_array(at_o, at_h, box=BOX)
-    
+
     # get shortest o-h-o difference, min == 1
     sort =  np.sort(oh_dists, axis=0)
     oho_list = sort[1, :]/sort[0, :]
@@ -77,7 +77,7 @@ def calc_hop(orig):
     for h_idx, o_idx in enumerate(nearest_idxs):
         at_exes[o_idx].append(oh_dists[o_idx, h_idx])
         count[o_idx] += 1
-    
+
     assert 1 in count
 
     # get h_idx and o_idx based on the complete atom list
@@ -95,7 +95,9 @@ def calc_hop(orig):
     sort = np.sort(ro_dists, axis=1)
     solv1 = np.average(sort[0][:6])
     solv2 = np.average(sort[1][:6])
+    solv3 = np.average(sort[0][:20])
+    solv4 = np.average(sort[1][:20])
 
-    return hop, h_idx, o_idx, np.sort(oho_list)[0], solv1, solv2
+    return hop, h_idx, o_idx, np.sort(oho_list)[0], np.sort(oho_list)[1], np.sort(oho_list)[2], solv1, solv2, solv3, solv4
 
 
