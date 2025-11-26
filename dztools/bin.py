@@ -13,14 +13,9 @@ typer.main.get_command_name = lambda name: name
 
 # define constants
 MOD_PATH = str(pathlib.Path(__file__).parent.resolve())
+# FOLDERS = ["funcs", "md", "mem", "chem", "ruru"]
 FOLDERS = ["funcs", "md", "mem", "chem", "ruru"]
 MAPPER = get_mapper(FOLDERS, MOD_PATH)
-
-# # manually add function from other folder
-# MAPPER["log"] = log
-
-# log the command
-# dzlog(" ".join(sys.argv) + "\n", MOD_PATH)
 
 # create the typer app
 app = typer.Typer(

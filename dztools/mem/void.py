@@ -1,9 +1,6 @@
 from typing import Annotated
 import typer
 
-from MDAnalysis.lib.pkdtree import PeriodicKDTree
-import numpy as np
-
 def mem_void(
     top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
     xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
@@ -16,6 +13,9 @@ def mem_void(
     from dztools.misc.mem_help import pcom_axis
     import matplotlib.pyplot as plt
     import MDAnalysis as mda
+    from MDAnalysis.lib.pkdtree import PeriodicKDTree
+    import numpy as np
+
     # from dztools.funcs.plotter import COLS
     # import scienceplots
     # plt.style.use('science')
@@ -61,6 +61,7 @@ def leaflet_void(pos, w, dim, X, Y, ax, rad):
     tree.set_coords(pos, cutoff=40) # pbc cutoff or something
     dots = tree.search_tree(w, radius=rad)
     boxx = dim[0]
+    import numpy as np
 
     if len(dots) > 0:
         all_indices = np.arange(len(X.flatten()))
