@@ -14,7 +14,7 @@ typer.main.get_command_name = lambda name: name
 # define constants
 MOD_PATH = str(pathlib.Path(__file__).parent.resolve())
 # FOLDERS = ["funcs", "md", "mem", "chem", "ruru"]
-FOLDERS = ["funcs", "md", "mem", "chem", "ruru"]
+FOLDERS = ["funcs", "md", "mem", "chem", "ruru", "co2"]
 MAPPER = get_mapper(FOLDERS, MOD_PATH)
 
 # create the typer app
