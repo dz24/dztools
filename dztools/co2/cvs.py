@@ -100,18 +100,18 @@ def co2_op(
             chh_line,
             dihed1,           # dihed angle 1
             dihed2,           # dihed angle 2
-            oxy0[1],          # o idx 1 
-            ang1[1],          # o idx 2 
-            ang2[1],          # o idx 3 
+            oxy0[1],          # o idx 1
+            ang1[1],          # o idx 2
+            ang2[1],          # o idx 3
             oxy0[2],          # h idx 1
             ang1[2],          # h idx 2
             ang2[2],          # h idx 3
-            d_CO[oidxes[0]],  # c-o dist 1 
-            d_CO[oidxes[1]],  # c-o dist 2 
-            d_CO[oidxes[2]],  # c-o dist 3 
-            oh_dists[0],      # o-h dist 1 
-            oh_dists[1],      # o-h dist 2 
-            oh_dists[2],      # o-h dist 3 
+            d_CO[oidxes[0]],  # c-o dist 1
+            d_CO[oidxes[1]],  # c-o dist 2
+            d_CO[oidxes[2]],  # c-o dist 3
+            oh_dists[0],      # o-h dist 1
+            oh_dists[1],      # o-h dist 2
+            oh_dists[2],      # o-h dist 3
             stable_f[0],      # smallest 1 o-h bond
             stable_f[1],      # smallest 2 o-h bond
             stable_f[2],      # smallest 3 o-h bond

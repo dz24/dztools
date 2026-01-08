@@ -400,3 +400,37 @@ def mem_void(
             for idx in range(len(cnts_k)):
                 string = f"{idx}\t{cnts_k[idx]:.08f}\t{cnts_ku[idx]:.08f}\t{cnts_kl[idx]:.08f}\n"
                 write.write(string)
+
+
+def mem_lipodiso(
+    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
+    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
+    rad: Annotated[float, typer.Option("-coord_z")] = 6.00,
+    samples: Annotated[int, typer.Option("-coord_z")] = 100,
+    out: Annotated[str, typer.Option("-out", help="string")] = "lipodiso.txt",
+):
+    """farthest clostest neighbor"""
+
+    import MDAnalysis as mda
+    import numpy as np
+    from MDAnalysis.analysis.distances import distance_array
+
+    u = mda.Universe(top, xtc)
+    carbs = u.select_atoms("name C7")
+
+    results = []
+    for idx, ts in enumerate(u.trajectory):
+        # self.u.atoms.positions = system.pos * 10
+        # self.u.dimensions = list(system.box[:3] * 10) + [90.]*3
+        # box = np.array(list(system.box[:3] * 10) + [90.]*3)
+
+        da = distance_array(carbs, carbs, box=ts.dimensions)
+
+        # minimal neighbour
+        sc = np.partition(da, 1, axis=1)[:, 1]
+
+        op = np.max(sc)
+        cidx  = np.argmax(sc)
+        results.append([idx, op, cidx])
+
+    np.savetxt(out, results)
