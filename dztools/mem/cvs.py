@@ -1,14 +1,13 @@
-from typing import Annotated
+from typing import Annotated as And
 
-import typer
-
+from typer import Option as Opt
 
 def mem_helicity(
-    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
-    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")] = None,
-    lip: Annotated[str, typer.Option("-lip", help="lipid type")] = "POPC",
-    plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
-    out: Annotated[str, typer.Option("-out", help="string")] = "",
+    top: And[str, Opt("-top", help="gro/pdb/tpr file")],
+    xtc: And[str, Opt("-xtc", help="xtc file")] = None,
+    lip: And[str, Opt("-lip", help="lipid type")] = "POPC",
+    plot: And[bool, Opt("-plot", help="plot")] = False,
+    out: And[str, Opt("-out", help="string")] = "",
 ):
     """DSSP"""
 
@@ -43,20 +42,20 @@ def mem_helicity(
 
 
 def mem_chain(
-    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
-    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
-    hoxy: Annotated[
-        str, typer.Option("-hoxy", help="xtc file")
+    top: And[str, Opt("-top", help="gro/pdb/tpr file")],
+    xtc: And[str, Opt("-xtc", help="xtc file")],
+    hoxy: And[
+        str, Opt("-hoxy", help="xtc file")
     ] = "OH2 O11 O12 O13 O14",
-    lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "resname POPC",
-    coord_n: Annotated[int, typer.Option("-coord_n")] = 26,
-    coord_d: Annotated[float, typer.Option("-coord_d")] = 1.0,
-    coord_r: Annotated[float, typer.Option("-coord_r")] = 8.0,
-    coord_z: Annotated[float, typer.Option("-coord_z")] = 0.75,
-    padding: Annotated[float, typer.Option("-padding")] = 0.5,
-    coord_h: Annotated[float, typer.Option("-coord_h")] = 0.25,
-    plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
-    out: Annotated[str, typer.Option("-out", help="string")] = "",
+    lip: And[str, Opt("-lip", help="xtc file")] = "resname POPC",
+    coord_n: And[int, Opt("-coord_n")] = 26,
+    coord_d: And[float, Opt("-coord_d")] = 1.0,
+    coord_r: And[float, Opt("-coord_r")] = 8.0,
+    coord_z: And[float, Opt("-coord_z")] = 0.75,
+    padding: And[float, Opt("-padding")] = 0.5,
+    coord_h: And[float, Opt("-coord_h")] = 0.25,
+    plot: And[bool, Opt("-plot", help="plot")] = False,
+    out: And[str, Opt("-out", help="string")] = "",
 ):
     """Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
 
@@ -110,20 +109,20 @@ def mem_chain(
 
 
 def mem_pfcvs(
-    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
-    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
-    hoxy: Annotated[
-        str, typer.Option("-hoxy", help="xtc file")
+    top: And[str, Opt("-top", help="gro/pdb/tpr file")],
+    xtc: And[str, Opt("-xtc", help="xtc file")],
+    hoxy: And[
+        str, Opt("-hoxy", help="xtc file")
     ] = "OH2 O11 O12 O13 O14",
-    lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "resname DMPC",
-    coord_n: Annotated[int, typer.Option("-coord_n")] = 26,
-    coord_d: Annotated[float, typer.Option("-coord_d")] = 1.0,
-    coord_r: Annotated[float, typer.Option("-coord_r")] = 8.0,
-    coord_z: Annotated[float, typer.Option("-coord_z")] = 0.75,
-    padding: Annotated[float, typer.Option("-padding")] = 0.5,
-    coord_h: Annotated[float, typer.Option("-coord_h")] = 0.25,
-    plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
-    out: Annotated[str, typer.Option("-out", help="string")] = "",
+    lip: And[str, Opt("-lip", help="xtc file")] = "resname DMPC",
+    coord_n: And[int, Opt("-coord_n")] = 26,
+    coord_d: And[float, Opt("-coord_d")] = 1.0,
+    coord_r: And[float, Opt("-coord_r")] = 8.0,
+    coord_z: And[float, Opt("-coord_z")] = 0.75,
+    padding: And[float, Opt("-padding")] = 0.5,
+    coord_h: And[float, Opt("-coord_h")] = 0.25,
+    plot: And[bool, Opt("-plot", help="plot")] = False,
+    out: And[str, Opt("-out", help="string")] = "",
 ):
     """Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
 
@@ -250,22 +249,22 @@ def mem_pfcvs(
 
 
 def mem_thin(
-    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
-    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
-    hoxy: Annotated[
-        str, typer.Option("-hoxy", help="xtc file")
+    top: And[str, Opt("-top", help="gro/pdb/tpr file")],
+    xtc: And[str, Opt("-xtc", help="xtc file")],
+    hoxy: And[
+        str, Opt("-hoxy", help="xtc file")
     ] = "OH2 O11 O12 O13 O14",
-    lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "resname DMPC",
-    coord_n: Annotated[int, typer.Option("-coord_n")] = 26,
-    coord_d: Annotated[float, typer.Option("-coord_d")] = 1.0,
-    coord_r: Annotated[float, typer.Option("-coord_r")] = 8.0,
-    coord_z: Annotated[float, typer.Option("-coord_z")] = 0.75,
-    padding: Annotated[float, typer.Option("-padding")] = 0.5,
-    coord_h: Annotated[float, typer.Option("-coord_h")] = 0.25,
-    lmt_n: Annotated[int, typer.Option("-lmt_n")] = 12,
-    lmt_k: Annotated[int, typer.Option("-lmt_k")] = 30,
-    plot: Annotated[bool, typer.Option("-plot", help="plot")] = False,
-    out: Annotated[str, typer.Option("-out", help="string")] = "",
+    lip: And[str, Opt("-lip", help="xtc file")] = "resname DMPC",
+    coord_n: And[int, Opt("-coord_n")] = 26,
+    coord_d: And[float, Opt("-coord_d")] = 1.0,
+    coord_r: And[float, Opt("-coord_r")] = 8.0,
+    coord_z: And[float, Opt("-coord_z")] = 0.75,
+    padding: And[float, Opt("-padding")] = 0.5,
+    coord_h: And[float, Opt("-coord_h")] = 0.25,
+    lmt_n: And[int, Opt("-lmt_n")] = 12,
+    lmt_k: And[int, Opt("-lmt_k")] = 30,
+    plot: And[bool, Opt("-plot", help="plot")] = False,
+    out: And[str, Opt("-out", help="string")] = "",
 ):
     """Implementation of https://pubs.acs.org/doi/10.1021/acs.jctc.7b00106"""
 
@@ -337,12 +336,12 @@ def mem_thin(
 
 
 def mem_void(
-    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
-    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
-    rad: Annotated[float, typer.Option("-coord_z")] = 6.00,
-    samples: Annotated[int, typer.Option("-coord_z")] = 100,
-    # lip: Annotated[str, typer.Option("-lip", help="xtc file")] = "resname DMPC",
-    out: Annotated[str, typer.Option("-out", help="string")] = "",
+    top: And[str, Opt("-top", help="gro/pdb/tpr file")],
+    xtc: And[str, Opt("-xtc", help="xtc file")],
+    rad: And[float, Opt("-coord_z")] = 6.00,
+    samples: And[int, Opt("-coord_z")] = 100,
+    # lip: And[str, Opt("-lip", help="xtc file")] = "resname DMPC",
+    out: And[str, Opt("-out", help="string")] = "",
 ):
     """stick ball"""
 
@@ -403,34 +402,135 @@ def mem_void(
 
 
 def mem_lipodiso(
-    top: Annotated[str, typer.Option("-top", help="gro/pdb/tpr file")],
-    xtc: Annotated[str, typer.Option("-xtc", help="xtc file")],
-    rad: Annotated[float, typer.Option("-coord_z")] = 6.00,
-    samples: Annotated[int, typer.Option("-coord_z")] = 100,
-    out: Annotated[str, typer.Option("-out", help="string")] = "lipodiso.txt",
+    top: And[str, Opt("-top", help="gro/pdb/tpr file")],
+    xtc: And[str, Opt("-xtc", help="xtc file")],
+    com: And[str, Opt("-com", help="C6")],
+    out: And[str, Opt("-out", help="string")] = "lipodiso.txt",
 ):
-    """farthest clostest neighbor"""
+    """farthest clostest neighbor
+
+                           tot time                 time per
+    just neighbor: 1.102856159210205 0.0026768353378888473
+    neigh and double: 0m1.698s
+
+
+    """
 
     import MDAnalysis as mda
     import numpy as np
     from MDAnalysis.analysis.distances import distance_array
 
+    import time
+
     u = mda.Universe(top, xtc)
-    carbs = u.select_atoms("name C7")
+    resids = set([str(i.resid) for i in u.atoms if i.resname == "SDS"])
+    coms = u.select_atoms(f"name {com}")
+    assert len(coms) > 0
+
+    results = []
+    time0 = time.time()
+    for idx, ts in enumerate(u.trajectory):
+        da1 = distance_array(coms, coms, box=ts.dimensions)
+
+        # first, second, third minimal neighbour
+        sc = np.partition(da1, 1, axis=1)[:, 1]
+        sort = np.argsort(sc)[-3:,][::-1]
+        ops = sc[sort]
+
+        resid1 = u.select_atoms(f"resid {coms[sort[0]].resid}")
+        resid2 = u.select_atoms(f"resid " + " ".join(resids - {str(coms[sort[0]].resid)}))
+
+        da2 = distance_array(resid1, resid2, box=ts.dimensions)
+        minda2 = np.min(da2)
+
+        results.append([idx, ops[0], ops[1], ops[2], sort[0], sort[1], sort[2], minda2])
+    time1 = time.time()
+
+    print("wut", idx, len(u.trajectory), time1-time0, (time1-time0)/(idx+1))
+
+    np.savetxt(out, results)
+
+
+def mem_lipodiso2(
+    top: And[str, Opt("-top", help="gro/pdb/tpr file")],
+    xtc: And[str, Opt("-xtc", help="xtc file")],
+    out: And[str, Opt("-out", help="string")] = "lipodiso.txt",
+    neighs: And[int, Opt("-neighs", help="string")] = 3,
+    lim: And[int, Opt("-lim", help="string")] = 10,
+):
+    """farthest clostest neighbor
+
+                           tot time                 time per
+    just neighbor: 1.102856159210205 0.0026768353378888473
+    neigh and double: 0m1.698s
+
+
+    """
+
+    import MDAnalysis as mda
+    import numpy as np
+    from MDAnalysis.analysis.distances import distance_array
+
+    import time
+
+    u = mda.Universe(top, xtc)
+    carbs = u.select_atoms(f"name C*")[::2]
+    carbs_name = " ".join(["S"] + [i.name for i in carbs])
+    # dump = u.select_atoms(f"name C* or name S")
+    group = u.select_atoms(f"name {carbs_name}")
+    resids = group.resids
+    mask = resids[:, None] == resids[None, :]
 
     results = []
     for idx, ts in enumerate(u.trajectory):
-        # self.u.atoms.positions = system.pos * 10
-        # self.u.dimensions = list(system.box[:3] * 10) + [90.]*3
-        # box = np.array(list(system.box[:3] * 10) + [90.]*3)
+        result = [idx]
+        da = distance_array(group, group, box=ts.dimensions)
 
-        da = distance_array(carbs, carbs, box=ts.dimensions)
+        # disregard interlipid distances
+        da[mask] += 1000
 
-        # minimal neighbour
+        # calc percentage
         sc = np.partition(da, 1, axis=1)[:, 1]
+        sc[sc>lim] = lim
+        avg = sc.reshape(80, 8).mean(axis=1)/lim
+        result += list(avg)
+        results.append(result)
+        print(idx, max(avg))
+        continue
+        exit()
 
-        op = np.max(sc)
-        cidx  = np.argmax(sc)
-        results.append([idx, op, cidx])
+        da1 = distance_array(coms, coms, box=ts.dimensions)
+
+
+
+        # largest minimal-neighbour
+        sc = np.partition(da1, 1, axis=1)[:, 1]
+        lmn_l = np.max(sc)
+        lmn_i = np.argmax(sc)
+
+        neighs_idx = " ".join([str(i+1) for i in np.argsort(da1[lmn_i])[1:neighs+1]])
+        lip1 = u.select_atoms(f"resid {lmn_i+1} and (name C* or name S)")
+        lip2 = u.select_atoms(f"resid {neighs_idx} and (name C* or name S)")
+        da2 = distance_array(lip1, lip2, box=ts.dimensions)
+
+        mins = np.min(da2, axis=1)
+        mins[mins>lim] = lim
+        perc = np.average(mins)/lim
+        result += [perc]
+
+        for idx1 in range(len(coms)):
+            if idx1 == lmn_i:
+                continue
+            neighs_idx = " ".join([str(i+1) for i in np.argsort(da1[idx1])[1:neighs+1]])
+            lip1 = u.select_atoms(f"resid {idx1+1} and (name C* or name S)")
+            lip2 = u.select_atoms(f"resid {neighs_idx} and (name C* or name S)")
+            da2 = distance_array(lip1, lip2, box=ts.dimensions)
+
+            mins = np.min(da2, axis=1)
+            mins[mins>lim] = lim
+            perc = np.average(mins)/lim
+            result += [perc]
+
+        results.append(result)
 
     np.savetxt(out, results)
