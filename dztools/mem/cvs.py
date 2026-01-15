@@ -493,44 +493,11 @@ def mem_lipodiso2(
         sc = np.partition(da, 1, axis=1)[:, 1]
         sc[sc>lim] = lim
         avg = sc.reshape(80, 8).mean(axis=1)/lim
-        result += list(avg)
-        results.append(result)
-        print(idx, max(avg))
-        continue
-        exit()
 
-        da1 = distance_array(coms, coms, box=ts.dimensions)
-
-
-
-        # largest minimal-neighbour
-        sc = np.partition(da1, 1, axis=1)[:, 1]
-        lmn_l = np.max(sc)
-        lmn_i = np.argmax(sc)
-
-        neighs_idx = " ".join([str(i+1) for i in np.argsort(da1[lmn_i])[1:neighs+1]])
-        lip1 = u.select_atoms(f"resid {lmn_i+1} and (name C* or name S)")
-        lip2 = u.select_atoms(f"resid {neighs_idx} and (name C* or name S)")
-        da2 = distance_array(lip1, lip2, box=ts.dimensions)
-
-        mins = np.min(da2, axis=1)
-        mins[mins>lim] = lim
-        perc = np.average(mins)/lim
-        result += [perc]
-
-        for idx1 in range(len(coms)):
-            if idx1 == lmn_i:
-                continue
-            neighs_idx = " ".join([str(i+1) for i in np.argsort(da1[idx1])[1:neighs+1]])
-            lip1 = u.select_atoms(f"resid {idx1+1} and (name C* or name S)")
-            lip2 = u.select_atoms(f"resid {neighs_idx} and (name C* or name S)")
-            da2 = distance_array(lip1, lip2, box=ts.dimensions)
-
-            mins = np.min(da2, axis=1)
-            mins[mins>lim] = lim
-            perc = np.average(mins)/lim
-            result += [perc]
-
+        sort = np.argsort(avg)[-3:,][::-1]
+        ops = avg[sort]
+        result += list(ops) + list(sort)
+        print(idx, ops[0], sort[0])
         results.append(result)
 
     np.savetxt(out, results)
