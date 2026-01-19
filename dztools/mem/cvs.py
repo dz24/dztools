@@ -455,7 +455,6 @@ def mem_lipodiso2(
     top: And[str, Opt("-top", help="gro/pdb/tpr file")],
     xtc: And[str, Opt("-xtc", help="xtc file")],
     out: And[str, Opt("-out", help="string")] = "lipodiso.txt",
-    neighs: And[int, Opt("-neighs", help="string")] = 3,
     lim: And[int, Opt("-lim", help="string")] = 10,
 ):
     """farthest clostest neighbor
@@ -475,8 +474,10 @@ def mem_lipodiso2(
 
     u = mda.Universe(top, xtc)
     carbs = u.select_atoms(f"name C*")[::2]
+    lips = len(u.select_atoms(f"name S"))
+    lip_ats = int(len(carbs)/lips + 1)
+
     carbs_name = " ".join(["S"] + [i.name for i in carbs])
-    # dump = u.select_atoms(f"name C* or name S")
     group = u.select_atoms(f"name {carbs_name}")
     resids = group.resids
     mask = resids[:, None] == resids[None, :]
@@ -492,7 +493,7 @@ def mem_lipodiso2(
         # calc percentage
         sc = np.partition(da, 1, axis=1)[:, 1]
         sc[sc>lim] = lim
-        avg = sc.reshape(80, 8).mean(axis=1)/lim
+        avg = sc.reshape(lips, lip_ats).mean(axis=1)/lim
 
         sort = np.argsort(avg)[-3:,][::-1]
         ops = avg[sort]

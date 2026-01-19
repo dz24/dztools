@@ -119,3 +119,55 @@ def co2_op(
         print(results[-1][0], results[-1][1])
     results = np.array(results)
     np.savetxt(out, results)
+
+def h2o_op(
+    xyz: And[str, Opt("-xyz", help="xyz file")],
+    box: And[float, Opt("-box", help="box")],
+    plot: And[bool, Opt("-plot", help="plot")] = False,
+    out: And[str, Opt("-out", help="string")] = "h2o_op.txt",
+):
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import MDAnalysis as mda
+    from MDAnalysis.analysis.distances import distance_array
+    from MDAnalysis.lib.distances import calc_angles, calc_dihedrals
+
+    box = np.array([box, box, box, 90, 90, 90])
+    u = mda.Universe(xyz)
+
+    oxygens = u.select_atoms("element O")
+    hydrogens = u.select_atoms("element H")
+
+    results = []
+    for idx0, ts in enumerate(u.trajectory):
+
+        d_HO = distance_array(
+            hydrogens.positions,
+            oxygens.positions,
+            box=box
+        )
+
+        # find H's closest O
+        argmins = np.argmin(d_HO, axis=1)
+        vals, counts = np.unique(argmins, return_counts=True)
+        setcnt = len(set(counts))
+
+        # if all O have 2 partners:
+        if setcnt == 1:
+            op = np.max(np.sort(d_HO, axis=0)[1, :])
+        # else, distance between O of min H and H of O most
+        else:
+            o_leas  = vals[np.argmin(counts)]
+            o_most  = vals[np.argmax(counts)]
+            h_most = np.where(argmins == o_most)[0]
+            op = np.min(d_HO[:, o_leas][h_most])
+
+        results.append([
+            idx0,              # time
+            op,
+            setcnt,
+        ])
+        print(results[-1])
+
+    results = np.array(results)
+    np.savetxt(out, results)
