@@ -469,10 +469,12 @@ def mem_lipodiso2(
     import MDAnalysis as mda
     import numpy as np
     from MDAnalysis.analysis.distances import distance_array
+    from dztools.misc.mem_help import pcom_axis
 
     import time
 
     u = mda.Universe(top, xtc)
+    pots = u.select_atoms(f"name POT")
     carbs = u.select_atoms(f"name C*")[::2]
     lips = len(u.select_atoms(f"name S"))
     lip_ats = int(len(carbs)/lips + 1)
@@ -491,13 +493,42 @@ def mem_lipodiso2(
         da[mask] += 1000
 
         # calc percentage
-        sc = np.partition(da, 1, axis=1)[:, 1]
+        sc = np.partition(da, 1, axis=1)[:, 0]
+        sc2 = sc.copy()
+        sc2r = sc2.reshape(lips, lip_ats)
         sc[sc>lim] = lim
+        # avg = sc.reshape(lips, lip_ats).mean(axis=1)/lim
         avg = sc.reshape(lips, lip_ats).mean(axis=1)/lim
 
         sort = np.argsort(avg)[-3:,][::-1]
         ops = avg[sort]
-        result += list(ops) + list(sort)
+
+        disso_idx = sort[0]
+        disso_avrg = np.average(sc2r[disso_idx])
+        disso_head = sc2r[disso_idx][0]
+        disso_tail = sc2r[disso_idx][-1]
+
+        # mask = np.zeros(len(group), dtype=bool)
+        # start = disso_idx * lip_ats
+        # stop  = (disso_idx + 1) * lip_ats
+        # mask[start:stop] = True
+
+        # group2 = group[mask]      # the dissociating lipid
+        # group3 = group[~mask]     # everything else
+
+        group2 = group[disso_idx*lip_ats:(disso_idx+1)*lip_ats]
+        da2 = distance_array(group2, pots, box=ts.dimensions)
+        minpot = np.min(da2)
+        # sc2 = np.partition(da2, 1, axis=1)[:, 0]
+        # minpot = np.min(sc2)
+
+        # resid = resids[disso_idx*lip_ats]
+        # print(sc2r[disso_idx])
+        # print(np.min(da2, axis=1))
+        # print(sc2)
+        # exit()
+
+        result += list(ops) + list(sort) + [disso_avrg, disso_head, disso_tail, minpot]
         print(idx, ops[0], sort[0])
         results.append(result)
 
