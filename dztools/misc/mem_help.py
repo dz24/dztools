@@ -410,6 +410,8 @@ def unwrapper(posw0, posw1, posu0, box1) :
     # posu0 : unwrapped pos at t0
     #  box1 : box at t1
 
+    import numpy as np
+
     deltaw = (posw1 - posw0)
     posu1 = posu0 + deltaw - np.floor(deltaw/box1 + 0.5)*box1
 
