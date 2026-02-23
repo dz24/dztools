@@ -401,3 +401,20 @@ def calc_thin2(
     lavg = np.average(dzs)
     d_lmt = lavg*np.average(coms)*(2/np.pi)
     return epsilon, epsilon_e, x0, y0, d_lmt
+
+
+def unwrapper(posw0, posw1, posu0, box1) :
+    "https://doi.org/10.1021/acs.jctc.3c00308"
+    # posw0 :   wrapped pos at t0
+    # posw1 :   wrapped pos at t1
+    # posu0 : unwrapped pos at t0
+    #  box1 : box at t1
+
+    deltaw = (posw1 - posw0)
+    posu1 = posu0 + deltaw - np.floor(deltaw/box1 + 0.5)*box1
+
+    return posu1
+
+
+
+
