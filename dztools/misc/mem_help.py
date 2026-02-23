@@ -196,15 +196,18 @@ def heavys(x, eps):
     return xnew
 
 
-def pcom_axis(pos, box):
+def pcom_axis(pos, box, mass=None):
     import numpy as np
+
+    if mass is None:
+        mass = np.ones_like(pos)
 
     tpi = np.pi * 2
     ang_s = np.sin(tpi * pos / box)
     ang_c = np.cos(tpi * pos / box)
 
-    avg_s = np.average(ang_s)
-    avg_c = np.average(ang_c)
+    avg_s = np.average(ang_s, weights=mass)
+    avg_c = np.average(ang_c, weights=mass)
 
     com = (np.arctan2(-avg_s, - avg_c) + np.pi) * box / tpi
     return com
